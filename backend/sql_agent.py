@@ -182,10 +182,13 @@ def synthesize_sql_query(
     if "read_csv" in q_lower or "/etc/passwd" in q_lower:
         return "SELECT * FROM read_csv('/etc/passwd');", "Rejected external file access."
 
-    # Case C: Revenue by store in a given year (e.g. Q1)
-    if "revenue" in q_lower and "store" in q_lower and ("highest" in q_lower or "top" in q_lower):
+    # Case C: Revenue by store in a given year (highest or lowest / extrema)
+    is_store_lowest = any(w in q_lower for w in ["lowest", "bottom", "least", "min", "minimum"])
+    is_store_highest = any(w in q_lower for w in ["highest", "top", "max", "maximum", "best"])
+    if "revenue" in q_lower and "store" in q_lower and (is_store_lowest or is_store_highest):
         year_match = re.search(r"\b(20\d{2})\b", question)
         year = year_match.group(1) if year_match else "2025"
+        sort_order = "ASC" if is_store_lowest else "DESC"
         sql = f"""
         SELECT s.store_id, s.store_name, s.store_manager,
                ROUND(SUM({_build_revenue_expression("o", "oi")}), 2) AS revenue_inr
@@ -195,7 +198,7 @@ def synthesize_sql_query(
         WHERE o.order_status = 'Delivered'
           AND o.order_date >= '{year}-01-01' AND o.order_date <= '{year}-12-31'
         GROUP BY s.store_id, s.store_name, s.store_manager
-        ORDER BY revenue_inr DESC
+        ORDER BY revenue_inr {sort_order}
         LIMIT 1;
         """.strip()
         return sql, ""
@@ -550,18 +553,21 @@ def compose_grounded_answer(
         else:
             return f"No customer found matching name '{target_name}'.", []
 
-    # Handle Q1: Store revenue
-    if "revenue" in q_lower and "store" in q_lower and ("highest" in q_lower or "top" in q_lower):
-        top_row = rows[0]
-        sname = top_row.get("store_name", "")
-        manager = top_row.get("store_manager", "")
-        rev = top_row.get("revenue_inr", 0.0)
+    # Handle Q1 & lowest store revenue: Store revenue extrema
+    is_store_lowest = any(w in q_lower for w in ["lowest", "bottom", "least", "min", "minimum"])
+    is_store_highest = any(w in q_lower for w in ["highest", "top", "max", "maximum", "best"])
+    if "revenue" in q_lower and "store" in q_lower and (is_store_lowest or is_store_highest):
+        extrema_row = rows[0]
+        sname = extrema_row.get("store_name", "")
+        manager = extrema_row.get("store_manager", "")
+        rev = extrema_row.get("revenue_inr", 0.0)
         formatted_rev = format_inr(rev)
         year_match = re.search(r"\b(20\d{2})\b", question)
         year_prefix = f"In {year_match.group(1)}, " if year_match else ""
+        extrema_word = "lowest" if is_store_lowest else "highest"
         return (
             (
-                f"{year_prefix}{sname} had the highest revenue of {formatted_rev} "
+                f"{year_prefix}{sname} had the {extrema_word} revenue of {formatted_rev} "
                 f"(sum of Delivered order line amounts). The store is managed by {manager}."
             ),
             [],

@@ -95,3 +95,27 @@ def test_disambiguation_arbitrary_name_probe():
     assert not res.abstained or "not found" in res.answer.lower()
     assert res.query_result is not None
     assert "priya" in res.sql.lower()
+
+
+def test_table_qa_lowest_revenue_query():
+    """Verify ADV-24 fix: lowest/bottom/least store revenue generates ASC query and correct prose."""
+    with get_duckdb_read_connection() as conn:
+        tables = [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+    if "orders" not in tables:
+        pytest.skip("Sample tables not loaded.")
+
+    res = run_table_qa("Which store had the lowest revenue in 2025, and who manages it?")
+    assert not res.abstained
+    assert res.query_result is not None
+    assert res.query_result.success
+    assert "orders" in res.citations[0]["tables"]
+    assert "lowest revenue" in res.answer.lower()
+    assert "managed by" in res.answer.lower()
+    assert "asc" in res.sql.lower()
+    assert "limit 1" in res.sql.lower()
+
+    # Test "bottom" variant
+    res_bottom = run_table_qa("Which store had the bottom revenue in 2025?")
+    assert not res_bottom.abstained
+    assert "lowest revenue" in res_bottom.answer.lower()
+    assert "asc" in res_bottom.sql.lower()

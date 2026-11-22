@@ -520,13 +520,18 @@ def compose_grounded_answer(
     )
     if year_rev_match:
         year = year_rev_match.group(1) or year_rev_match.group(2)
-        rev_val = rows[0].get("revenue_inr") if rows else None
-        if (
-            not rows
-            or rev_val is None
-            or rev_val == 0
-            or (len(rows) == 1 and all(v is None for v in rows[0].values()))
-        ):
+        if not rows or (len(rows) == 1 and all(v is None for v in rows[0].values())):
+            return (
+                f"There are no orders recorded for {year} in the dataset. Total revenue for {year} is 0.",
+                [0.0],
+            )
+        # Check for scalar 0 revenue (e.g. SELECT SUM(...) AS revenue_inr -> 0 or NULL)
+        rev_val = None
+        for key in ["revenue_inr", "revenue", "total_revenue", "total_revenue_inr", "sales"]:
+            if key in rows[0]:
+                rev_val = rows[0][key]
+                break
+        if len(rows) == 1 and len(rows[0]) <= 2 and (rev_val is None or rev_val == 0):
             return (
                 f"There are no orders recorded for {year} in the dataset. Total revenue for {year} is 0.",
                 [0.0],
@@ -568,7 +573,13 @@ def compose_grounded_answer(
         extrema_row = rows[0]
         sname = extrema_row.get("store_name", "")
         manager = extrema_row.get("store_manager", "")
-        rev = extrema_row.get("revenue_inr", 0.0)
+        rev = extrema_row.get("revenue_inr")
+        if rev is None:
+            for k in ["revenue", "total_revenue", "total_revenue_inr", "sales"]:
+                if k in extrema_row and extrema_row[k] is not None:
+                    rev = extrema_row[k]
+                    break
+        rev = float(rev or 0.0)
         formatted_rev = format_inr(rev)
         year_match = re.search(r"\b(20\d{2})\b", question)
         year_prefix = f"In {year_match.group(1)}, " if year_match else ""
@@ -591,7 +602,13 @@ def compose_grounded_answer(
         for idx, r in enumerate(rows[:limit_count], start=1):
             name = r.get("full_name", "")
             cid = r.get("customer_id", "")
-            spend = r.get("spend_inr", 0.0)
+            spend = r.get("spend_inr")
+            if spend is None:
+                for k in ["spend", "total_spend", "total_spend_inr"]:
+                    if k in r and r[k] is not None:
+                        spend = r[k]
+                        break
+            spend = float(spend or 0.0)
             formatted_spend = format_inr(spend)
             lines.append(f"{idx}. {name} ({cid}) - {formatted_spend}")
         return "\n".join(lines), []
@@ -601,7 +618,13 @@ def compose_grounded_answer(
         top_cust = rows[0]
         name = top_cust.get("full_name", "")
         cid = top_cust.get("customer_id", "")
-        spend = top_cust.get("spend_inr", 0.0)
+        spend = top_cust.get("spend_inr")
+        if spend is None:
+            for k in ["spend", "total_spend", "total_spend_inr"]:
+                if k in top_cust and top_cust[k] is not None:
+                    spend = top_cust[k]
+                    break
+        spend = float(spend or 0.0)
         formatted_spend = format_inr(spend)
         note_str = (
             "Assuming all-time spend across Delivered orders (as no specific year was specified): "

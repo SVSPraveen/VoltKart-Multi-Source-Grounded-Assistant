@@ -8,6 +8,7 @@ dual read-write / read-only sandbox isolation (ADR-002).
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -381,6 +382,104 @@ def delete_table_profile(table_name: str) -> None:
     init_sqlite_db()
     with get_sqlite_connection() as conn:
         conn.execute("DELETE FROM table_meta WHERE table_name = ?", (table_name,))
+
+
+def search_chunks_fts(query: str, limit: int = 20) -> list[dict[str, Any]]:
+    """Search chunks via SQLite FTS5 BM25 index across all document versions."""
+    init_sqlite_db()
+    tokens = re.findall(r"\w+", query)
+    if not tokens:
+        return []
+
+    # Format tokens for safe FTS5 MATCH
+    match_query = " OR ".join(f'"{t}"' for t in tokens if len(t) > 1)
+    if not match_query:
+        match_query = " OR ".join(f'"{t}"' for t in tokens)
+
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        sql = """
+        SELECT c.chunk_id, c.file_sha256, c.file_name, c.chunk_index,
+               c.section_title, c.page_number, c.content, c.token_count,
+               f.version_family, f.doc_date, f.doc_title,
+               bm25(chunks_fts) as rank
+        FROM chunks_fts
+        JOIN chunks c ON chunks_fts.chunk_id = c.chunk_id
+        JOIN files f ON c.file_sha256 = f.sha256
+        WHERE chunks_fts MATCH ?
+        ORDER BY rank ASC
+        LIMIT ?
+        """
+        cur = conn.execute(sql, (match_query, limit))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_all_chunks_with_embeddings() -> list[dict[str, Any]]:
+    """Retrieve all chunks that have dense vector embeddings along with file metadata."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        sql = """
+        SELECT c.chunk_id, c.file_sha256, c.file_name, c.chunk_index,
+               c.section_title, c.page_number, c.content, c.token_count,
+               c.embedding, f.version_family, f.doc_date, f.doc_title
+        FROM chunks c
+        JOIN files f ON c.file_sha256 = f.sha256
+        WHERE c.embedding IS NOT NULL
+        ORDER BY c.file_name ASC, c.chunk_index ASC
+        """
+        cur = conn.execute(sql)
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_chunks_for_family(version_family: str) -> list[dict[str, Any]]:
+    """Retrieve all chunks for all versions in a given document family."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        sql = """
+        SELECT c.chunk_id, c.file_sha256, c.file_name, c.chunk_index,
+               c.section_title, c.page_number, c.content, c.token_count,
+               f.version_family, f.doc_date, f.doc_title
+        FROM chunks c
+        JOIN files f ON c.file_sha256 = f.sha256
+        WHERE LOWER(f.version_family) = LOWER(?)
+        ORDER BY f.doc_date ASC, c.chunk_index ASC
+        """
+        cur = conn.execute(sql, (version_family,))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_files_for_family(version_family: str) -> list[dict[str, Any]]:
+    """Retrieve all file metadata records in a given document family ordered chronologically."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        sql = """
+        SELECT * FROM files
+        WHERE LOWER(version_family) = LOWER(?)
+        ORDER BY doc_date ASC, file_name ASC
+        """
+        cur = conn.execute(sql, (version_family,))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_chunks_by_file_name(file_name: str) -> list[dict[str, Any]]:
+    """Retrieve all chunks for a specific document file."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        sql = """
+        SELECT c.chunk_id, c.file_sha256, c.file_name, c.chunk_index,
+               c.section_title, c.page_number, c.content, c.token_count,
+               f.version_family, f.doc_date, f.doc_title
+        FROM chunks c
+        JOIN files f ON c.file_sha256 = f.sha256
+        WHERE c.file_name = ?
+        ORDER BY c.chunk_index ASC
+        """
+        cur = conn.execute(sql, (file_name,))
+        return [dict(r) for r in cur.fetchall()]
 
 
 _ON_RESET_CALLBACKS: list[Any] = []

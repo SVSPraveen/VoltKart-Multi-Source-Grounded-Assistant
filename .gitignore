@@ -20,6 +20,7 @@ build/
 
 # Databases & Runtime Data (AGENTS.md: never commit data/, *.duckdb, *.db)
 data/
+evaluation/variants/
 *.duckdb
 *.duckdb.wal
 *.db

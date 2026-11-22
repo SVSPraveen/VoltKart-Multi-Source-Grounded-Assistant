@@ -37,6 +37,10 @@ def generate_variant(
     shift_days: int = 0,
     price_scale: float = 1.0,
     store_prefix: str | None = None,
+    mixed_date_formats: bool = False,
+    table_policy: bool = False,
+    different_formats: bool = False,
+    omit_facts_in_v3: bool = False,
 ) -> dict[str, Any]:
     """Generate a full variant bundle from source bundle into output_dir.
 
@@ -56,6 +60,10 @@ def generate_variant(
         "warranty_name": warranty_name,
         "shift_days": shift_days,
         "price_scale": price_scale,
+        "mixed_date_formats": mixed_date_formats,
+        "table_policy": table_policy,
+        "different_formats": different_formats,
+        "omit_facts_in_v3": omit_facts_in_v3,
         "tables_modified": [],
         "documents_modified": [],
     }
@@ -162,12 +170,105 @@ def generate_variant(
                         lambda m: shift_date_str(m.group(1), shift_days),
                         content,
                     )
+
+                if mixed_date_formats and "Document Date:" in content:
+                    # Convert some ISO dates to DD/MM/YYYY or spelled out format
+                    def _format_mixed(match: re.Match) -> str:
+                        iso_val = match.group(1)
+                        try:
+                            dt = datetime.strptime(iso_val, "%Y-%m-%d")
+                            return f"Document Date: {dt.strftime('%d/%m/%Y')} (Effective: {dt.strftime('%B %d, %Y')})"
+                        except Exception:
+                            return match.group(0)
+
+                    content = re.sub(
+                        r"Document Date:\s*(\d{4}-\d{2}-\d{2})", _format_mixed, content
+                    )
+
                 out_file.write_text(content, encoding="utf-8")
                 transform_log["documents_modified"].append(new_filename)
             else:
                 # For binary files (.pdf, .docx), copy to maintain document family
                 shutil.copy2(doc_file, out_file)
                 transform_log["documents_modified"].append(new_filename)
+
+        # 2b. Table-formatted policy generation (spec section 10 & 15 V4)
+        if table_policy:
+            table_policy_filename = f"{brand_name}_Return_Policy_2025-09-01.md"
+            table_policy_path = docs_out / table_policy_filename
+            table_policy_text = f"""# {brand_name} Return Policy
+Document Date: 2025-09-01
+Version: 3.0
+Status: Active Policy
+
+## Overview
+This document outlines customer return privileges and statutory guidelines for {brand_name}.
+
+## Customer Tier Return Windows
+| Membership Tier | Return Window (Days) | Exceptions & Waivers |
+| :--- | :--- | :--- |
+| Standard | 14 days | Standard return window across categories |
+| Silver | 21 days | Standard return window across categories |
+| Gold | 30 days | All categories except smartphones (10 days) |
+| Platinum | 45 days | All categories except smartphones (10 days) |
+
+## Category Exceptions
+| Category | Rule |
+| :--- | :--- |
+| Smartphones | 10 days return window regardless of customer tier |
+| Major Appliances | 10 days replacement only |
+| Perishables | Non-returnable items |
+
+## Damaged on Delivery
+Damaged items upon delivery must be reported within 48 hours for immediate refund.
+"""
+            table_policy_path.write_text(table_policy_text, encoding="utf-8")
+            transform_log["documents_modified"].append(table_policy_filename)
+
+        # 2c. Fact omission in newest document version (spec section 10 & 15 V4, R-001)
+        if omit_facts_in_v3:
+            v3_date = shift_date_str("2025-09-01", shift_days)
+            v3_filename = f"{brand_name}_Return_Policy_{v3_date}.txt"
+            v3_path = docs_out / v3_filename
+            v3_text = f"""# {brand_name} Return Policy
+Document Date: {v3_date}
+Version: 3.0
+Status: Active Policy
+
+## Customer Tier Return Windows
+- Standard members: 14 days
+- Silver members: 21 days
+- Gold members: 30 days
+- Platinum members: 45 days
+
+## General Terms
+Returns require original packaging and proof of purchase.
+Items marked final sale cannot be returned.
+"""
+            v3_path.write_text(v3_text, encoding="utf-8")
+            transform_log["documents_modified"].append(v3_filename)
+
+            # Ensure older version v2 exists and explicitly states damaged items
+            v2_date = shift_date_str("2025-01-15", shift_days)
+            v2_filename = f"{brand_name}_Return_Policy_{v2_date}.txt"
+            v2_path = docs_out / v2_filename
+            v2_text = f"""# {brand_name} Return Policy
+Document Date: {v2_date}
+Version: 2.0
+Status: Superseded
+
+## Customer Tier Return Windows
+- Standard members: 14 days
+- Silver members: 21 days
+- Gold members: 20 days
+- Platinum members: 30 days
+
+## Special Circumstances
+Damaged items upon delivery must be reported within 48 hours for immediate refund.
+Smartphones carry an exception window of 10 days across all membership tiers.
+"""
+            v2_path.write_text(v2_text, encoding="utf-8")
+            transform_log["documents_modified"].append(v2_filename)
 
     # 3. Data Dictionary
     dict_in = source_dir / "DATA_DICTIONARY.md"
@@ -210,6 +311,29 @@ PRESETS: dict[str, dict[str, Any]] = {
         "shift_days": 30,
         "price_scale": 1.10,
         "store_prefix": "STR",
+    },
+    "variant_1_apex": {
+        "brand_name": "ApexRetail",
+        "warranty_name": "ApexCare",
+        "shift_days": 30,
+        "price_scale": 1.10,
+        "store_prefix": "STR",
+        "mixed_date_formats": True,
+    },
+    "variant_2_zenith_table": {
+        "brand_name": "ZenithCommerce",
+        "warranty_name": "ZenithCare",
+        "shift_days": 0,
+        "price_scale": 1.0,
+        "table_policy": True,
+        "different_formats": True,
+    },
+    "variant_3_omission": {
+        "brand_name": "OmniStore",
+        "warranty_name": "OmniCare",
+        "shift_days": 15,
+        "price_scale": 1.0,
+        "omit_facts_in_v3": True,
     },
 }
 

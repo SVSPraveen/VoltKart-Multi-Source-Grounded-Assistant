@@ -17,10 +17,15 @@ def test_scan_file_clean(tmp_path: Path):
 @pytest.mark.parametrize(
     "bad_content, expected_match",
     [
-        ("store_id = 'S04'", "Store ID S04"),
+        ("store_id = 'S04'", "Store ID"),
+        ("store_id = 'S07'", "Store ID"),
         ("name = 'VoltKart Connaught Place'", "voltkart"),
+        ("store = 'Baner'", "Baner"),
+        ("manager = 'Ritu Menon'", "Ritu Menon"),
         ("if customer == 'Aarav Kulkarni': pass", "Aarav Kulkarni"),
-        ("product = 'Nexora X12 Pro'", "Nexora X12 Pro"),
+        ("customer_id = 'C0001'", "Customer ID"),
+        ("order_id = 'O00050'", "Order ID"),
+        ("product = 'Nexora X12 Pro'", "Nexora"),
         ("doc = 'VoltKart_Return_Policy_2025.txt'", "voltkart"),
     ],
 )

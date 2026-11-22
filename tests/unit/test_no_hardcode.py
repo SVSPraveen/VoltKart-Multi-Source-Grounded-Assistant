@@ -35,3 +35,22 @@ def test_scan_file_catches_violations(tmp_path: Path, bad_content: str, expected
     violations = scan_file(dirty_file)
     assert len(violations) >= 1
     assert any(expected_match.lower() in v.lower() for v in violations)
+
+
+def test_frontend_components_contain_no_raw_hex_colors():
+    """Verify AGENTS.md Section 4: All colour comes from design tokens, no raw hex in components."""
+    import glob
+    import re
+
+    root = Path(__file__).resolve().parent.parent.parent
+    tsx_files = glob.glob(str(root / "frontend" / "src" / "**" / "*.tsx"), recursive=True)
+    assert len(tsx_files) > 0, "No TSX frontend files found to audit."
+
+    hex_violations: list[str] = []
+    for fpath in tsx_files:
+        content = Path(fpath).read_text(encoding="utf-8", errors="replace")
+        matches = re.findall(r"#[0-9a-fA-F]{3,8}\b", content)
+        if matches:
+            hex_violations.append(f"{Path(fpath).name}: {matches}")
+
+    assert not hex_violations, f"Raw hex colors found in frontend components: {hex_violations}"

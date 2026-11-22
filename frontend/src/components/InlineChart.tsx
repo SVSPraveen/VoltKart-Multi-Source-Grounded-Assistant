@@ -24,13 +24,13 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
   const totalY = data_points.reduce((acc, p) => acc + p.y, 0) || 1.0;
 
   const PIE_COLORS = [
-    'var(--color-primary, #0F766E)',
-    '#2DD4BF',
-    'var(--accent-volt, #D4E815)',
-    '#F59E0B',
-    '#6366F1',
-    '#EC4899',
-    '#0EA5E9',
+    'var(--chart-color-1)',
+    'var(--chart-color-2)',
+    'var(--chart-color-3)',
+    'var(--chart-color-4)',
+    'var(--chart-color-5)',
+    'var(--chart-color-6)',
+    'var(--chart-color-7)',
   ];
 
   const pieCx = 150;
@@ -130,7 +130,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
                       y={yPos}
                       width={barWidth}
                       height={barH}
-                      fill="var(--color-primary, #0F766E)"
+                      fill="var(--color-primary)"
                       rx="2"
                     />
                     <text
@@ -154,7 +154,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
               {/* Draw connected polyline */}
               <polyline
                 fill="none"
-                stroke="var(--color-primary, #0F766E)"
+                stroke="var(--color-primary)"
                 strokeWidth="2.5"
                 points={data_points
                   .map((p, i) => {
@@ -174,8 +174,8 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
                       cx={xPos}
                       cy={yPos}
                       r="4"
-                      fill="var(--accent-volt, #D4E815)"
-                      stroke="var(--color-primary, #0F766E)"
+                      fill="var(--accent-volt)"
+                      stroke="var(--color-primary)"
                       strokeWidth="2"
                     />
                     <text

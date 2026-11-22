@@ -52,7 +52,7 @@ export const Composer: React.FC<ComposerProps> = ({
           position: 'relative',
           border: '1px solid var(--border-strong)',
           borderRadius: '6px',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--bg-input)',
           padding: '8px 12px',
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
         }}>

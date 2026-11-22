@@ -152,7 +152,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                             width: '6px',
                             height: '6px',
                             borderRadius: '50%',
-                            backgroundColor: c.type === 'table' ? '#3B82F6' : 'var(--color-success)',
+                            backgroundColor: c.type === 'table' ? 'var(--color-table-badge)' : 'var(--color-success)',
                           }} />
                           <span>
                             {c.type === 'table' ? `Table [${cIdx + 1}]` : `Doc [${cIdx + 1}]`}

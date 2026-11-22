@@ -14,6 +14,18 @@
   --color-success-bg: #ECFDF5;
   --color-danger: #DC2626;
   --color-danger-bg: #FEF2F2;
+  --color-primary: #0F766E;
+  --color-table-badge: #3B82F6;
+  --bg-input: #FFFFFF;
+  --bg-code-dark: #1E293B;
+  --text-code-light: #F8FAFC;
+  --chart-color-1: #0F766E;
+  --chart-color-2: #2DD4BF;
+  --chart-color-3: #D4E815;
+  --chart-color-4: #F59E0B;
+  --chart-color-5: #6366F1;
+  --chart-color-6: #EC4899;
+  --chart-color-7: #0EA5E9;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
 }

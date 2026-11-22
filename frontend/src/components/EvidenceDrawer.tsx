@@ -159,8 +159,8 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
                 </button>
               </div>
               <pre style={{
-                backgroundColor: '#1E293B',
-                color: '#F8FAFC',
+                backgroundColor: 'var(--bg-code-dark)',
+                color: 'var(--text-code-light)',
                 padding: '10px',
                 borderRadius: '4px',
                 fontSize: '11px',

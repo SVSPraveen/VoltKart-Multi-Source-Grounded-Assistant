@@ -45,9 +45,16 @@ def test_persistence_across_process_restart():
     # Step 3: Spawn an independent python subprocess to simulate complete process termination and restart
     check_script = """
 import sys
+from pathlib import Path
+
+# Add project root to sys.path
+root = Path.cwd()
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
+
 import duckdb
 import sqlite3
-from pathlib import Path
+from backend.ingestion import get_current_ingestion_summary, get_active_schema_card
 
 duckdb_path = sys.argv[1]
 sqlite_path = sys.argv[2]
@@ -64,10 +71,23 @@ file_row = sdb.execute("SELECT file_name, doc_date FROM files WHERE file_name = 
 assert file_row is not None, "File record missing in SQLite"
 assert file_row[1] == "2025-08-10", f"Unexpected doc_date {file_row[1]}"
 
-# Verify FTS5 query
 fts_match = sdb.execute("SELECT chunk_id FROM chunks_fts WHERE chunks_fts MATCH 'machinery'").fetchone()
 assert fts_match is not None, "FTS5 query failed to match indexed term"
 sdb.close()
+
+# Verify backend ingestion summary and schema card in completely fresh process
+summary = get_current_ingestion_summary()
+assert len(summary.tables) == 1, f"Expected 1 table in summary after restart, got {len(summary.tables)}"
+assert summary.tables[0].table_name == "metrics"
+assert summary.tables[0].row_count == 3
+assert summary.tables[0].primary_key == "metric_id"
+assert len(summary.documents) == 1
+assert summary.documents[0].doc_date == "2025-08-10"
+
+card = get_active_schema_card()
+assert "# Database Schema Card" in card
+assert "Table: `metrics`" in card
+assert "`metric_id`" in card
 
 print("PERSISTENCE_VERIFIED")
 """

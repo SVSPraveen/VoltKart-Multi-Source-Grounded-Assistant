@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
+from backend.models import ColumnProfile, InferredRelationship, TableProfile
+
 if TYPE_CHECKING:
     from backend.models import DocumentChunk, DocumentMetadata
 
@@ -110,6 +112,16 @@ def init_sqlite_db() -> None:
                 metadata TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS table_meta (
+                table_name TEXT PRIMARY KEY,
+                row_count INTEGER NOT NULL,
+                column_count INTEGER NOT NULL,
+                primary_key TEXT,
+                columns_json TEXT NOT NULL,
+                relationships_json TEXT NOT NULL,
+                uploaded_at TEXT NOT NULL
             );
             """
         )
@@ -252,6 +264,71 @@ def list_all_files() -> list[dict[str, Any]]:
         return [dict(r) for r in cur.fetchall()]
 
 
+def save_table_profile(profile: TableProfile, uploaded_at: str) -> None:
+    """Persist table metadata, column profiles, and relationships in SQLite table_meta (spec sec 8)."""
+    init_sqlite_db()
+    columns_json = json.dumps([col.model_dump() for col in profile.columns])
+    relationships_json = json.dumps([rel.model_dump() for rel in profile.inferred_relationships])
+
+    with get_sqlite_connection() as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO table_meta (
+                table_name, row_count, column_count, primary_key,
+                columns_json, relationships_json, uploaded_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                profile.table_name,
+                profile.row_count,
+                profile.column_count,
+                profile.primary_key,
+                columns_json,
+                relationships_json,
+                uploaded_at,
+            ),
+        )
+
+
+def load_all_table_profiles() -> list[TableProfile]:
+    """Retrieve all persisted table profiles from SQLite table_meta."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM table_meta ORDER BY table_name ASC").fetchall()
+        profiles: list[TableProfile] = []
+        for r in rows:
+            cols = [ColumnProfile(**c) for c in json.loads(r["columns_json"])]
+            rels = [InferredRelationship(**rel) for rel in json.loads(r["relationships_json"])]
+            profiles.append(
+                TableProfile(
+                    table_name=r["table_name"],
+                    row_count=r["row_count"],
+                    column_count=r["column_count"],
+                    columns=cols,
+                    primary_key=r["primary_key"],
+                    inferred_relationships=rels,
+                )
+            )
+        return profiles
+
+
+def delete_table_profile(table_name: str) -> None:
+    """Delete a table profile from SQLite table_meta."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.execute("DELETE FROM table_meta WHERE table_name = ?", (table_name,))
+
+
+_ON_RESET_CALLBACKS: list[Any] = []
+
+
+def register_reset_callback(cb: Any) -> None:
+    """Register a callback to be called on storage reset (e.g. clearing in-memory caches)."""
+    if cb not in _ON_RESET_CALLBACKS:
+        _ON_RESET_CALLBACKS.append(cb)
+
+
 def reset_storage() -> None:
     """Reset all database tables without unlinking files to prevent Windows locking errors."""
     ensure_storage_dirs()
@@ -265,6 +342,7 @@ def reset_storage() -> None:
             DELETE FROM documentation;
             DELETE FROM messages;
             DELETE FROM chats;
+            DELETE FROM table_meta;
             """
         )
 
@@ -274,6 +352,12 @@ def reset_storage() -> None:
             try:
                 tables = conn.execute("SHOW TABLES;").fetchall()
                 for (t_name,) in tables:
-                    conn.execute(f"DROP TABLE IF EXISTS {t_name};")
+                    conn.execute(f'DROP TABLE IF EXISTS "{t_name}";')
             except Exception:
                 pass
+
+    for cb in _ON_RESET_CALLBACKS:
+        try:
+            cb()
+        except Exception:
+            pass

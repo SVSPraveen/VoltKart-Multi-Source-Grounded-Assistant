@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -125,6 +126,68 @@ def init_sqlite_db() -> None:
             );
             """
         )
+
+
+def ensure_chat_exists(chat_id: str, title: str = "New Chat") -> None:
+    """Ensure a chat row exists in SQLite for foreign key constraints."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        now = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO chats (chat_id, created_at, updated_at, title)
+            VALUES (?, ?, ?, ?)
+            """,
+            (chat_id, now, now, title),
+        )
+
+
+def save_message(
+    message_id: str,
+    chat_id: str,
+    role: str,
+    content: str,
+    citations: list[dict[str, Any]] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Persist a chat message with citations and metadata."""
+    init_sqlite_db()
+    ensure_chat_exists(chat_id)
+    with get_sqlite_connection() as conn:
+        now = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
+        conn.execute(
+            """
+            INSERT INTO messages (message_id, chat_id, role, content, citations, metadata, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                message_id,
+                chat_id,
+                role,
+                content,
+                json.dumps(citations or []),
+                json.dumps(metadata or {}),
+                now,
+            ),
+        )
+
+
+def get_chat_messages(chat_id: str) -> list[dict[str, Any]]:
+    """Retrieve message history for a specific chat_id (R-012 scoped)."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(
+            "SELECT * FROM messages WHERE chat_id = ? ORDER BY rowid ASC",
+            (chat_id,),
+        )
+        messages = []
+        for r in cur.fetchall():
+            m = dict(r)
+            m["citations"] = json.loads(m["citations"]) if m["citations"] else []
+            m["metadata"] = json.loads(m["metadata"]) if m["metadata"] else {}
+            messages.append(m)
+        return messages
 
 
 @contextmanager

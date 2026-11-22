@@ -470,6 +470,38 @@ def _handle_chart_query(
     }
 
 
+# Competitors and external search tokens for generalized gating (R-004, ADV-17)
+EXTERNAL_COMPETITORS = [
+    "amazon",
+    "flipkart",
+    "walmart",
+    "croma",
+    "reliance digital",
+    "tata cliq",
+    "best buy",
+    "target",
+    "ebay",
+]
+EXTERNAL_SEARCH_PHRASES = [
+    "web search",
+    "external source",
+    "other retailer",
+    "competitor",
+    "on the web",
+    "on the internet",
+    "online market",
+]
+
+
+def _is_external_knowledge_query(q_lower: str) -> bool:
+    """Check if query targets external competitors or external web knowledge."""
+    if any(c in q_lower for c in EXTERNAL_COMPETITORS):
+        return True
+    if any(p in q_lower for p in EXTERNAL_SEARCH_PHRASES):
+        return True
+    return False
+
+
 def ask_assistant(
     question: str,
     chat_id: str = "default",
@@ -514,8 +546,8 @@ def ask_assistant(
             "metadata": {"probe": "A5"},
         }
 
-    # 2. External knowledge check when web search is disabled (Q17)
-    if "amazon" in q_lower and not web_enabled:
+    # 2. External knowledge check when web search is disabled (Q17, R-004)
+    if _is_external_knowledge_query(q_lower) and not web_enabled:
         answer = (
             "I cannot answer this question from the uploaded sources, and web search is disabled."
         )
@@ -650,7 +682,7 @@ def ask_assistant(
         }
 
     # Turn 18a or direct web question
-    if web_enabled and ("amazon" in q_lower or "web search" in q_lower):
+    if web_enabled and (_is_external_knowledge_query(q_lower) or "web search" in q_lower):
         web_res = run_web_qa(clean_q, web_enabled=True)
         asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
         meta = dict(web_res.metadata)

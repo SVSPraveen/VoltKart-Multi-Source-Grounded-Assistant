@@ -141,3 +141,18 @@ def test_general_web_search_does_not_hallucinate_amazon_return_policy():
     if not qa_res.abstained:
         assert len(qa_res.citations) >= 1
         assert qa_res.citations[0]["type"] == "web"
+
+
+def test_generalized_competitor_gating_when_web_off():
+    """Verify generalized external gating blocks Flipkart/Walmart competitor queries when web is OFF."""
+    reset_outbound_search_count()
+    for query in [
+        "What is Flipkart's replacement policy for electronics?",
+        "Does Walmart offer price matching?",
+        "What are competitor return policies on the web?",
+    ]:
+        res = ask_assistant(query, chat_id="chat_test_gen_gate", web_enabled=False)
+        assert get_outbound_search_count() == 0
+        assert res["abstained"] is True
+        assert "web search is disabled" in res["answer"].lower()
+        assert len(res["citations"]) == 0

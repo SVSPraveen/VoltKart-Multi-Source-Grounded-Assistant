@@ -160,6 +160,19 @@ def _extract_claim_pattern(
             if m.group(1).lower()
             not in {"version", "owner", "supersedes", "exception", "delivery", "note", "date"}
         ]
+    if not tier_lines:
+        # Check markdown/structured table rows: | Gold | 30 days | ... |
+        table_matches = re.findall(
+            r"\|\s*([A-Za-z]+)\s*\|\s*(\d+\s*days[^\n\r\|]*)\s*\|",
+            content,
+            re.IGNORECASE,
+        )
+        tier_lines = [
+            (m[0].strip(), m[1].strip())
+            for m in table_matches
+            if m[0].lower()
+            not in {"tier", "membership", "customer", "category", "status", "version"}
+        ]
     if tier_lines:
         tiers_found = [t[0].strip().title() for t in tier_lines]
         for tf in tiers_found:
@@ -178,6 +191,12 @@ def _extract_claim_pattern(
                         content,
                         re.I,
                     )
+                    if not quote_m:
+                        quote_m = re.search(
+                            rf"\|\s*{re.escape(t_name)}\s*\|\s*{re.escape(t_val)}[^\n\r]*\|",
+                            content,
+                            re.I,
+                        )
                     raw_quote = (
                         quote_m.group(0).strip().lstrip("-*• ") if quote_m else t_val.strip()
                     )
@@ -283,6 +302,38 @@ def _extract_claim_pattern(
                     page=chunk.get("page_number"),
                     states_fact=True,
                     value="No - opened earphones or earbuds are not eligible for return",
+                    evidence_quote=raw_quote,
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
+            )
+
+    # 4b. Category exception queries (e.g. Smartphone return window)
+    if any(k in q_lower for k in ["smartphone", "phone", "mobile"]) and "return" in q_lower:
+        m_phone = re.search(
+            r"(?:Exception:\s*)?Smartphones?\s*(?:have a strict|carry an exception window of|are limited to)?\s*(\d+[- ]days?)[^\n\r]*",
+            content,
+            re.I,
+        )
+        if not m_phone:
+            m_phone = re.search(
+                r"\|\s*Smartphones?\s*\|\s*(\d+\s*days[^\n\r\|]*)\s*\|",
+                content,
+                re.I,
+            )
+        if m_phone:
+            raw_quote = m_phone.group(0).strip()
+            val_text = f"{m_phone.group(1).strip()} return window"
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value=val_text,
                     evidence_quote=raw_quote,
                     chunk_id=chunk.get("chunk_id", ""),
                     chunk_content=content,
@@ -404,6 +455,37 @@ def _extract_claim_pattern(
                     states_fact=True,
                     value=m_claims.group(0).strip(),
                     evidence_quote=m_claims.group(0).strip(),
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
+            )
+
+    # 6b. Operational & Store Hours queries
+    if any(k in q_lower for k in ["hours", "timing", "timings", "opening", "closing", "schedule"]):
+        m_hours = re.search(
+            r"(?:operating|store|opening)?\s*hours[^\n:]*:\s*([^\n\r]+)",
+            content,
+            re.I,
+        )
+        if not m_hours:
+            m_hours = re.search(
+                r"(?:store\s+opening\s+hours\s+are[^\n\.]*|\d{1,2}(?::\d{2})?\s*(?:am|pm)\s+to\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)[^\n\.]*)",
+                content,
+                re.I,
+            )
+        if m_hours:
+            raw_quote = m_hours.group(0).strip()
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value=raw_quote,
+                    evidence_quote=raw_quote,
                     chunk_id=chunk.get("chunk_id", ""),
                     chunk_content=content,
                 ),

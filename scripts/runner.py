@@ -261,6 +261,9 @@ def main() -> int:
     # no-hardcode
     subparsers.add_parser("no-hardcode", help="Check for hardcoded sample strings")
 
+    # variants
+    subparsers.add_parser("variants", help="Run V4 variant generalization evaluation")
+
     # clean
     subparsers.add_parser("clean", help="Remove test/lint caches")
 
@@ -309,6 +312,10 @@ def main() -> int:
         return code
     elif args.subcommand == "no-hardcode":
         code, _, out = run_command([py, str(root / "scripts" / "check_no_hardcode.py")], cwd=root)
+        print(out)
+        return code
+    elif args.subcommand == "variants":
+        code, _, out = run_command([py, str(root / "scripts" / "eval_variants.py")], cwd=root)
         print(out)
         return code
     elif args.subcommand == "clean":

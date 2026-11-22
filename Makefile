@@ -50,7 +50,7 @@ no-hardcode:
 	$(PYTHON) scripts/runner.py no-hardcode
 
 variants:
-	$(PYTHON) tests/variants/make_variant.py --preset full_variation --output evaluation/variant_bundle
+	$(PYTHON) scripts/eval_variants.py
 
 clean:
 	$(PYTHON) scripts/runner.py clean

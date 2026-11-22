@@ -411,3 +411,27 @@ actually bites, change its status to `observed` and add the date and commit.
 
 <!-- New rules go below. Keep numbering sequential. -->
 
+### R-062 — Pattern-matching claim extractors must never short-circuit non-matching query intents
+- Status: observed (Phase 7, 2026-11-22)
+- Context: In `backend/doc_agent.py`, `_extract_claim_pattern` returned `(None, discovered_options)` when tier lines were present in a document chunk even when the user question had nothing to do with customer tiers, causing subsequent claim extractors (refund timeline, damaged goods reporting window, earbuds returnability, and job specs) to be bypassed and falsely abstain.
+- Rule: Sub-intent pattern extractors must only return terminal `None` values when the question specifically requests that intent; otherwise, control flow must continue through all subsequent candidate pattern extractors.
+- Check: Golden questions Q7–Q12 and unit test `tests/unit/test_version_resolver.py`.
+
+### R-063 — Auxiliary metadata tokens must strictly meet WCAG 2.1 AA 4.5:1 contrast thresholds across all card backgrounds
+- Status: observed (Phase 7, 2026-11-22)
+- Context: In `frontend/src/index.css`, secondary metadata token `--text-dim` (`#6B7280`) on card surface `#F5F3EC` yielded a contrast ratio of 4.35:1, failing axe-core WCAG 2.1 AA audits on 9 document date and chat badge nodes.
+- Rule: Ensure all text tokens, including timestamps, file counts, and auxiliary badge labels, achieve at least 4.5:1 contrast ratio against their immediate background containers (`--text-dim: #525866` yields 6.24:1).
+- Check: Axe-core E2E audit in `tests/e2e/test_accessibility.py` asserting zero critical/serious violations.
+
+### R-064 — Filename sanitization must normalize path separators across OS boundaries and strip control characters
+- Status: observed (Phase 7, 2026-11-22)
+- Context: Relying solely on `pathlib.Path(raw).name` left foreign directory separators unstripped when evaluating Windows paths (`..\\..\\`) on POSIX environments and permitted null bytes (`\x00`) and control characters.
+- Rule: Always normalize directory separators (`\` -> `/`), strip null bytes `[\x00-\x1f\x7f]`, and extract strictly the final leaf element before validating file content.
+- Check: Unit test `test_sanitize_filename_cross_platform` in `tests/unit/test_security_audit.py`.
+
+### R-065 — Calibrated evaluation judges must require all critical dimensions to pass independently rather than relying on weighted averages alone
+- Status: observed (Phase 7, 2026-11-22)
+- Context: Initial judge scoring allowed flawed candidates with complete failure in provenance (`score: 0.0`) or missing citations (`score: 0.0`) to pass overall because the composite weighted score exceeded the 0.70 threshold.
+- Rule: Evaluation judges must enforce non-negotiable pass gates across all critical dimensions (`correctness`, `provenance`, `citation_sufficiency`, `abstention_honesty`, and `grounding_faithfulness`) so no single catastrophic flaw can hide behind a high composite score.
+- Check: Calibration unit test `test_judge_calibration_flags_deliberate_errors` in `tests/judge/test_judge_calibration.py`.
+

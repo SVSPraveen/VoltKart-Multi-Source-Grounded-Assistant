@@ -592,13 +592,18 @@ def ask_assistant(
         doc_date = doc_cit.get("doc_date", doc_cit.get("date", ""))
         doc_sec = doc_cit.get("section", "")
 
+        prior_user_questions = [
+            m.get("content", "") for m in get_chat_messages(chat_id) if m.get("role") == "user"
+        ]
+        prior_text = " ".join(prior_user_questions).lower()
+
         ext_name = (
             "Amazon India"
-            if "amazon" in q_lower or "amazon" in str(web_cit).lower()
+            if "amazon" in q_lower or "amazon" in str(web_cit).lower() or "amazon" in prior_text
             else "external platform"
         )
         brand_match = re.search(
-            r"compare (?:that )?with ([A-Za-z0-9_-]+)'s", clean_q, re.IGNORECASE
+            r"compare (?:that )?with\s+([A-Za-z0-9_-]+)(?:'s)?", clean_q, re.IGNORECASE
         )
         brand_name = brand_match.group(1) if brand_match else "the store"
 

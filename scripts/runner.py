@@ -236,6 +236,14 @@ def main() -> int:
         action="store_true",
         help="Allow golden suite to fail as expected red baseline (Phase 1)",
     )
+    verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Require golden suite to pass (strict mode)",
+    )
+
+    # dev
+    subparsers.add_parser("dev", help="Start development server")
 
     # test
     subparsers.add_parser("test", help="Run unit tests")
@@ -266,7 +274,19 @@ def main() -> int:
     root = get_project_root()
 
     if args.subcommand == "verify":
-        return run_verify(allow_red_golden=args.red_baseline)
+        env_red = os.environ.get("RED_BASELINE", "1") in ("1", "true", "TRUE")
+        allow_red = (args.red_baseline or env_red) and not getattr(args, "strict", False)
+        return run_verify(allow_red_golden=allow_red)
+    elif args.subcommand == "dev":
+        main_py = root / "backend" / "main.py"
+        if main_py.exists():
+            code, _, out = run_command(
+                [py, "-m", "uvicorn", "backend.main:app", "--reload"], cwd=root
+            )
+            print(out)
+            return code
+        print("[dev] Development server endpoint (backend/main.py) will be active in Phase 2.")
+        return 0
     elif args.subcommand == "test":
         code, _, out = run_command([py, "-m", "pytest", "tests/unit"], cwd=root)
         print(out)

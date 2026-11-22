@@ -64,7 +64,65 @@ def main():
     print("-> Q1 MATCH EXACT: PASS\n")
 
     print("=" * 60)
-    print("2. Re-deriving Golden Q4: Platinum Bengaluru Laptop Buyers in Q1 2026")
+    print("2. Re-deriving Golden Q2: Top 3 Customers by Spend at Store S04 in 2025")
+    print("=" * 60)
+    deliv_s04_2025 = orders[
+        (orders["store_id"] == "S04")
+        & (orders["order_status"] == "Delivered")
+        & (orders["order_date"].str.startswith("2025"))
+    ]
+    s04_items = deliv_s04_2025.merge(order_items, on="order_id")
+    s04_items["line_revenue"] = (
+        s04_items["quantity"]
+        * s04_items["unit_price_inr"]
+        * (1.0 - s04_items["discount_pct"] / 100.0)
+    )
+    cust_spend = (
+        s04_items.groupby("customer_id")["line_revenue"]
+        .sum()
+        .reset_index()
+        .merge(customers, on="customer_id")
+        .sort_values(by="line_revenue", ascending=False)
+        .head(3)
+    )
+    expected_top3 = [
+        ("C0118", "Aarav Kulkarni", 815723.40),
+        ("C0112", "Ishaan Sharma", 609659.80),
+        ("C0052", "Varun Mishra", 437761.95),
+    ]
+    for idx, (exp_cid, exp_name, exp_spend) in enumerate(expected_top3):
+        row = cust_spend.iloc[idx]
+        diff = abs(row["line_revenue"] - exp_spend)
+        print(
+            f"Rank {idx + 1}: {row['full_name']} ({row['customer_id']}) - Actual={row['line_revenue']:.2f} | Expected={exp_spend:.2f} | Diff={diff:.6f}"
+        )
+        assert row["customer_id"] == exp_cid
+        assert row["full_name"] == exp_name
+        assert diff < 0.01
+    print("-> Q2 MATCH EXACT: PASS\n")
+
+    print("=" * 60)
+    print("3. Re-deriving Golden Q3: Most Returned Product & Common Return Reason")
+    print("=" * 60)
+    ret_items = returns.merge(order_items, on="order_item_id").merge(products, on="product_id")
+    ret_counts = ret_items["product_name"].value_counts()
+    top_ret_product = ret_counts.index[0]
+    top_ret_count = ret_counts.iloc[0]
+    print(f"Top Returned Product: {top_ret_product} (count={top_ret_count})")
+    assert top_ret_product == "Nexora X12 Pro"
+    assert top_ret_count == 9
+
+    top_prod_returns = ret_items[ret_items["product_name"] == "Nexora X12 Pro"]
+    reasons = top_prod_returns["return_reason"].value_counts()
+    top_reason = reasons.index[0]
+    top_reason_count = reasons.iloc[0]
+    print(f"Top Return Reason:    {top_reason} (count={top_reason_count})")
+    assert top_reason == "Not as described"
+    assert top_reason_count == 4
+    print("-> Q3 MATCH EXACT: PASS\n")
+
+    print("=" * 60)
+    print("4. Re-deriving Golden Q4: Platinum Bengaluru Laptop Buyers in Q1 2026")
     print("=" * 60)
     plat_blr = customers[
         (customers["loyalty_tier"] == "Platinum") & (customers["home_city"] == "Bengaluru")
@@ -90,7 +148,7 @@ def main():
     print("-> Q4 MATCH EXACT: PASS\n")
 
     print("=" * 60)
-    print("3. Re-deriving Golden Q5: Total Refund Amount by Region")
+    print("5. Re-deriving Golden Q5: Total Refund Amount by Region")
     print("=" * 60)
     ret_items = returns.merge(order_items, on="order_item_id")
     ret_orders = ret_items.merge(orders, on="order_id")
@@ -124,7 +182,7 @@ def main():
     print("-> Q5 MATCH EXACT: PASS\n")
 
     print("=" * 60)
-    print("ALL 3 GOLDEN TABLE NUMBERS INDEPENDENTLY VERIFIED TO THE EXACT PAISA.")
+    print("ALL 5 GOLDEN TABLE NUMBERS INDEPENDENTLY VERIFIED TO THE EXACT PAISA.")
     print("=" * 60)
 
 

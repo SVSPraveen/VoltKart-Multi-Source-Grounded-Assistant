@@ -58,10 +58,13 @@ cp .env.example .env
 
 | Command | Purpose |
 | :--- | :--- |
+| `make setup` | Install dependencies into virtual environment |
+| `make dev` | Start development server |
 | `make verify` | Run full verification suite (lint, format, no-hardcode, unit, golden) and write report |
 | `make lint` | Run code quality checks via Ruff |
 | `make format` | Check/apply formatting via Ruff |
 | `make no-hardcode` | Scan `backend/` and `frontend/src/` for forbidden sample entity strings |
+| `make variants` | Generate full variant bundle with brand mutations and date shifts |
 | `make test` | Run unit test suite |
 | `make golden` | Run evaluation suite against `tests/golden/golden.yaml` |
 

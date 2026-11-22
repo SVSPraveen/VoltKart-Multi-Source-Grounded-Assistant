@@ -453,3 +453,15 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Comparative multi-source answers must extract policy parameters dynamically from the retrieved document result (`doc_res.answer`) and format comparison statements reflecting the actual retrieved values.
 - Check: Golden question Q18 and variant test suite `tests/variants/test_variant_generalization.py`.
 
+### R-069 — Video script demonstration queries must be verified distinct from evaluation benchmark questions
+- Status: observed (Phase 8 Review, 2026-11-22)
+- Context: In `docs/VIDEO_SCRIPT.md`, Demo Query 3 originally reused Question Q8 ("How soon must a customer report a product damaged on delivery?"), violating the explicit spec requirement that explainer video demonstration queries must not duplicate any of the 20 official evaluation questions.
+- Rule: Walk all demonstration queries in marketing/explainer scripts against the golden evaluation question dataset (`tests/golden/golden.yaml`) and assert zero semantic or verbatim overlap.
+- Check: String matching assertion against all 20 questions in `golden.yaml`.
+
+### R-070 — Traceability matrices must preserve original requirement specifications and numbering
+- Status: observed (Phase 8 Review, 2026-11-22)
+- Context: `README.md` requirement traceability table shifted C2 to Table QA and C3 to Document QA, completely omitting requirement 2 (Multi-format File Ingestion: CSV, PDF, DOCX, TXT, .md) from the C1–C7 core requirement audit.
+- Rule: Requirement traceability matrices must map 1:1 to the original numbering of the client specification and brief (C1: Chat UI, C2: File Upload, C3: Table QA, C4: Document QA, C5: Citations & Abstention, C6: Memory & Isolation, C7: Export PDF, B8: Web Search, B9: Multiple Chats, B10: Charts).
+- Check: Cross-check between `README.md` traceability table and `assignment/` brief.
+

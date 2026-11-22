@@ -119,7 +119,7 @@ flowchart TD
     end
 
     Composer -->|POST /api/upload| Persistence
-    Composer -->|POST /api/chats/{id}/messages/stream| SSE
+    Composer -->|POST /api/chats/:id/messages/stream| SSE
     SSE --> Router
     Router --> TitleSync --> SQLite
 
@@ -135,13 +135,13 @@ flowchart TD
     MixedAgent --> TableAgent
     MixedAgent --> DocAgent
 
-    Router -->|Web Intent & Toggle ON| WebAgent
+    Router -->|Web Intent and Toggle ON| WebAgent
     WebAgent --> Grounding
 
     Grounding --> SSE
     SSE --> UI
 
-    ExportBtn -->|GET /api/chats/{id}/export.pdf| ReportLabEngine
+    ExportBtn -->|GET /api/chats/:id/export.pdf| ReportLabEngine
     ReportLabEngine --> Persistence
 ```
 

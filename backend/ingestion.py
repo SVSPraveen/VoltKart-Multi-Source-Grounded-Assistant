@@ -8,6 +8,8 @@ ingestion summaries for users and agents.
 from __future__ import annotations
 
 import hashlib
+import io
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -27,15 +29,19 @@ from backend.storage import (
     get_file_by_sha256,
     init_sqlite_db,
     list_all_files,
+    load_all_table_profiles,
+    register_reset_callback,
     save_chunks,
     save_data_documentation,
     save_file_metadata,
+    save_table_profile,
 )
 from backend.tables import (
     generate_schema_card,
     infer_foreign_keys,
     ingest_table,
     is_data_documentation_text,
+    parse_declared_schema_from_documentation,
 )
 
 MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
@@ -46,6 +52,14 @@ ZIP_DOCX_MAGIC = b"PK\x03\x04"
 # In-memory registry of loaded table DataFrames and profiles during application lifecycle
 _LOADED_TABLES: dict[str, pd.DataFrame] = {}
 _TABLE_PROFILES: dict[str, TableProfile] = {}
+
+
+def _clear_in_memory_cache() -> None:
+    _LOADED_TABLES.clear()
+    _TABLE_PROFILES.clear()
+
+
+register_reset_callback(_clear_in_memory_cache)
 
 
 def sanitize_filename(raw_filename: str) -> str:
@@ -77,23 +91,28 @@ def validate_file_content(filename: str, content: bytes) -> None:
             raise ValueError(
                 f"File '{filename}' has .pdf extension but does not contain valid PDF headers"
             )
-        # Check for encrypted PDF markers
-        if b"/Encrypt" in content:
-            # Let parser attempt or fail cleanly
-            pass
 
     if ext == ".docx":
         if not content.startswith(ZIP_DOCX_MAGIC):
             raise ValueError(
                 f"File '{filename}' has .docx extension but is not a valid Office Open XML zip file"
             )
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                namelist = zf.namelist()
+                if not any("word/" in n or "[Content_Types].xml" in n for n in namelist):
+                    raise ValueError(
+                        f"File '{filename}' is a zip archive but not a valid Word (.docx) document"
+                    )
+        except zipfile.BadZipFile as exc:
+            raise ValueError(f"File '{filename}' is a corrupted zip archive") from exc
 
 
 def process_single_file(
     filename: str,
     content: bytes,
 ) -> tuple[str, Any]:
-    """Process a single uploaded file (table or document) returning (type, result)."""
+    """Process a single uploaded file (table, document, or documentation) returning (type, result)."""
     clean_name = sanitize_filename(filename)
     validate_file_content(clean_name, content)
 
@@ -107,19 +126,51 @@ def process_single_file(
         _LOADED_TABLES[tbl_name] = df
         _TABLE_PROFILES[tbl_name] = profile
 
+        # Check if data documentation has declared schema keys (spec 7.1)
+        doc_text = get_all_data_documentation()
+        declared_pks, declared_fks = parse_declared_schema_from_documentation(doc_text)
+        if tbl_name in declared_pks:
+            profile.primary_key = declared_pks[tbl_name]
+
         # Update relationships across all known tables
         pks = {name: prof.primary_key for name, prof in _TABLE_PROFILES.items()}
-        all_rels = infer_foreign_keys(_LOADED_TABLES, pks)
+        all_rels = infer_foreign_keys(_LOADED_TABLES, pks, declared_fks)
         for name, prof in _TABLE_PROFILES.items():
             prof.inferred_relationships = [r for r in all_rels if r.from_table == name]
+            save_table_profile(prof, now_utc)
 
         return "table", profile
 
     if ext in {".pdf", ".docx", ".txt", ".md"}:
-        # Check for idempotency
+        # Check if text is data documentation / dictionary text
+        sample_text = content[:16384].decode("utf-8", errors="replace")
+        known_tables = list(_LOADED_TABLES.keys())
+        known_cols = [c.name for prof in _TABLE_PROFILES.values() for c in prof.columns]
+        is_doc = is_data_documentation_text(
+            sample_text, known_tables, known_cols, filename=clean_name
+        )
+
+        if ext in {".md", ".txt"} and is_doc:
+            full_text = content.decode("utf-8", errors="replace")
+            save_data_documentation(clean_name, full_text, now_utc)
+
+            # Update declared schema across any already-loaded tables
+            declared_pks, declared_fks = parse_declared_schema_from_documentation(full_text)
+            for t_name, dec_pk in declared_pks.items():
+                if t_name in _TABLE_PROFILES:
+                    _TABLE_PROFILES[t_name].primary_key = dec_pk
+
+            pks = {name: prof.primary_key for name, prof in _TABLE_PROFILES.items()}
+            all_rels = infer_foreign_keys(_LOADED_TABLES, pks, declared_fks)
+            for name, prof in _TABLE_PROFILES.items():
+                prof.inferred_relationships = [r for r in all_rels if r.from_table == name]
+                save_table_profile(prof, now_utc)
+
+            return "documentation", clean_name
+
+        # Check for idempotency on standard knowledge base documents
         existing = get_file_by_sha256(file_sha256)
-        if existing and existing.get("file_name") == clean_name:
-            # Return cached metadata
+        if existing:
             meta = DocumentMetadata(
                 file_name=clean_name,
                 sha256=file_sha256,
@@ -137,15 +188,6 @@ def process_single_file(
 
         # Structure-aware extraction and chunking
         metadata, chunks = chunk_document(content, clean_name, file_sha256)
-
-        # Check if text is data documentation
-        all_text = "\n".join(c.content for c in chunks)
-        known_tables = list(_LOADED_TABLES.keys())
-        known_cols = [c.name for prof in _TABLE_PROFILES.values() for c in prof.columns]
-        if ext in {".md", ".txt"} and is_data_documentation_text(
-            all_text, known_tables, known_cols
-        ):
-            save_data_documentation(clean_name, all_text, now_utc)
 
         # Generate local dense embeddings
         chunk_texts = [f"{c.section_title}\n{c.content}" for c in chunks]
@@ -214,8 +256,13 @@ def get_current_ingestion_summary(
         fam = rf["version_family"]
         families.setdefault(fam, []).append(rf["file_name"])
 
-    # Reconcile relationship connections on table profiles
-    tables_list = list(_TABLE_PROFILES.values())
+    # Load persistent table profiles from SQLite table_meta (spec sec 8)
+    saved_profiles = load_all_table_profiles()
+    for prof in saved_profiles:
+        if prof.table_name not in _TABLE_PROFILES:
+            _TABLE_PROFILES[prof.table_name] = prof
+
+    tables_list = list(_TABLE_PROFILES.values()) if _TABLE_PROFILES else saved_profiles
     doc_text = get_all_data_documentation()
 
     return IngestionSummary(

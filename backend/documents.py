@@ -88,6 +88,11 @@ def parse_pdf(file_bytes: bytes) -> tuple[str, list[tuple[int, str]], list[str]]
                 warnings.append("Scanned document or missing text layer detected")
 
     except Exception as exc:
+        msg = str(exc).lower()
+        if "password" in msg or "encrypt" in msg:
+            raise ValueError(
+                "File is password-protected or encrypted. Please remove password encryption and retry."
+            ) from exc
         raise ValueError(f"Failed to read PDF document: {exc}") from exc
 
     return detected_title, pages, warnings
@@ -159,8 +164,8 @@ def parse_text(file_bytes: bytes, encoding: str = "utf-8") -> tuple[str, list[tu
     detected_title = ""
 
     heading_underline_pattern = re.compile(r"^[-=~]{3,}$")
-    markdown_heading_pattern = re.compile(r"^#{1,4}\s+(.+)$")
-    numbered_heading_pattern = re.compile(r"^\d+\.\s+([A-Za-z\s]+)$")
+    markdown_heading_pattern = re.compile(r"^#{1,6}\s+(.+)$")
+    numbered_heading_pattern = re.compile(r"^\d+(?:\.\d+)*\.?\s+([A-Za-z0-9][^\n\r]+)$")
 
     idx = 0
     while idx < len(lines):
@@ -307,7 +312,7 @@ def chunk_document(
                 cur_lines: list[str] = []
                 for line in lines:
                     stripped = line.strip()
-                    if re.match(r"^\d+\.\s+[A-Za-z\s]+", stripped):
+                    if re.match(r"^\d+(?:\.\d+)*\.?\s+([A-Za-z0-9][^\n\r]+)", stripped):
                         if cur_lines:
                             section_entries.append((cur_heading, page_num, "\n".join(cur_lines)))
                             cur_lines = []

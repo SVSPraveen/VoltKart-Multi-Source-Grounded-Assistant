@@ -233,6 +233,8 @@ def synthesize_sql_query(
             LIMIT {limit};
             """.strip()
             return sql, ""
+        elif "that store" in q_lower or "the store" in q_lower:
+            return "", "No store has been specified or discussed in this conversation context."
         else:
             # All-time or general highest spend customer (A9)
             sql = f"""

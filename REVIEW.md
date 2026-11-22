@@ -373,5 +373,11 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Always verify chat sessions, message persistence, contextual entity resolution, and conversational summaries across genuine OS subprocess boundaries.
 - Check: `test_chat_and_followup_persistence_across_process_restart` in `tests/unit/test_persistence.py`.
 
+### R-056 — Context-dependent follow-up queries missing referenced entities must abstain honestly
+- Status: observed (Phase 6, 2026-11-22)
+- Context: In `backend/sql_agent.py`, when a follow-up query referenced an entity that had not been established in the active chat's context (e.g. asking "top customers at that store" in a fresh conversation without a prior store turn), the planner fell through to an unconstrained all-time customer spend query while falsely claiming the results were "at that store".
+- Rule: When a query contains contextual referents (e.g. "that store", "that product") but no matching entity exists in the active chat's conversation context, the agent must decline or abstain honestly rather than executing an unconstrained query and misattributing results.
+- Check: Unit test `test_conversational_entity_isolation_across_chats` in `tests/unit/test_chat_isolation.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->
 

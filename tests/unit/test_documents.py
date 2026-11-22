@@ -136,3 +136,75 @@ def test_deeply_nested_markdown_headings():
     assert any("Level 1" in h for h in headings)
     assert any("Level 3" in h for h in headings)
     assert any("Level 5 Sub-clause" in h for h in headings)
+
+
+def test_adv17_warranty_pricing_domain_guard():
+    """Verify ADV-17 fix: general cost questions (lease costs) do not extract warranty pricing."""
+    from backend.doc_agent import _extract_claim_pattern
+
+    warranty_chunk = {
+        "file_name": "Sample_Warranty_Terms.txt",
+        "doc_date": "2025-01-01",
+        "version_family": "warranty_terms",
+        "section_title": "Pricing & Coverage",
+        "page_number": 1,
+        "content": (
+            "1-year plan: 10% of product price\n"
+            "2-year plan: 15% of product price\n"
+            "A maximum of 2 claims per product per year is allowed."
+        ),
+    }
+
+    # Query without warranty domain tokens must NOT match warranty pricing
+    claim, _ = _extract_claim_pattern(
+        "What is the company profit margin and lease costs?", warranty_chunk
+    )
+    assert claim is None
+
+    # Query with warranty domain token MUST match warranty pricing
+    claim_w, _ = _extract_claim_pattern("What is the cost of the warranty plan?", warranty_chunk)
+    assert claim_w is not None
+    assert claim_w.states_fact is True
+    assert "10%" in claim_w.value
+
+
+def test_adv18_job_description_role_guard():
+    """Verify ADV-18 fix: non-matching roles (e.g. CEO) do not match ML Engineer JD."""
+    from backend.doc_agent import _chunk_matches_query_role, _extract_claim_pattern
+
+    jd_chunk = {
+        "file_name": "JD_ML_Engineer_2025.docx",
+        "doc_date": "2025-03-10",
+        "version_family": "job_description",
+        "section_title": "Details",
+        "page_number": 1,
+        "content": (
+            "Job Description: Machine Learning Engineer\n"
+            "Department: Data Science\n"
+            "Location: Bengaluru (on-site)\n"
+            "Compensation: INR 12 to 18 LPA\n"
+            "Reports to: Ananya Rao, Head of Data Science"
+        ),
+    }
+
+    # Query asking for CEO must NOT match ML Engineer JD
+    assert not _chunk_matches_query_role("what is the ceo compensation?", jd_chunk["content"])
+    assert not _chunk_matches_query_role("who does the ceo report to?", jd_chunk["content"])
+
+    claim_ceo_comp, _ = _extract_claim_pattern("What is the CEO compensation?", jd_chunk)
+    assert claim_ceo_comp is None
+
+    claim_ceo_rep, _ = _extract_claim_pattern("Who does the CEO report to?", jd_chunk)
+    assert claim_ceo_rep is None
+
+    # Query asking for Machine Learning Engineer MUST match
+    assert _chunk_matches_query_role(
+        "what is the location and salary for the machine learning engineer role?",
+        jd_chunk["content"],
+    )
+    claim_mle_comp, _ = _extract_claim_pattern(
+        "What is the salary for the Machine Learning Engineer role?", jd_chunk
+    )
+    assert claim_mle_comp is not None
+    assert claim_mle_comp.states_fact is True
+    assert "12 to 18 LPA" in claim_mle_comp.value

@@ -131,6 +131,96 @@ def _extract_claim_with_llm(
     return None
 
 
+def _chunk_matches_query_role(q_lower: str, content: str) -> bool:
+    """Verify whether the role targeted in the user query matches the job title in the document chunk (ADV-18)."""
+    doc_role = None
+    role_m = re.search(r"Job Description:\s*([^\n\r]+)", content, re.IGNORECASE)
+    if role_m:
+        doc_role = role_m.group(1).strip().lower()
+    else:
+        role_m = re.search(
+            r"(?:hiring an?|role of|position of)\s+([A-Za-z\s]+?)(?:\s+to|\.|\n)",
+            content,
+            re.IGNORECASE,
+        )
+        if role_m:
+            doc_role = role_m.group(1).strip().lower()
+
+    if not doc_role:
+        return True
+
+    doc_tokens = set(re.findall(r"\b[a-zA-Z]+\b", doc_role))
+    if "machine" in doc_tokens and "learning" in doc_tokens:
+        doc_tokens.add("ml")
+
+    dept_m = re.search(r"Department:\s*([^\n\r]+)", content, re.IGNORECASE)
+    if dept_m:
+        doc_tokens.update(re.findall(r"\b[a-zA-Z]+\b", dept_m.group(1).lower()))
+
+    # Extract target role from query
+    target_role = None
+    m = re.search(
+        r"(?:for|of)\s+(?:the\s+)?([A-Za-z\s]+?)\s+(?:role|position|job)\b",
+        q_lower,
+    )
+    if m:
+        target_role = m.group(1).strip()
+    else:
+        m = re.search(
+            r"(?:who does|who do)\s+(?:the\s+)?([A-Za-z\s]+?)\s+report to",
+            q_lower,
+        )
+        if m:
+            target_role = m.group(1).strip()
+        else:
+            m = re.search(
+                r"\b([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:compensation|salary|work mode|location)\b",
+                q_lower,
+            )
+            if m:
+                target_role = m.group(1).strip()
+            else:
+                m = re.search(
+                    r"(?:salary|compensation|work mode|location)\s+(?:for|of)\s+(?:the\s+)?([A-Za-z\s]+)",
+                    q_lower,
+                )
+                if m:
+                    target_role = m.group(1).strip()
+
+    if not target_role:
+        return True
+
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "for",
+        "of",
+        "in",
+        "and",
+        "or",
+        "to",
+        "what",
+        "is",
+        "are",
+        "range",
+        "details",
+        "expected",
+        "annual",
+        "package",
+        "approximate",
+    }
+    target_tokens = [w for w in re.findall(r"\b[a-zA-Z]+\b", target_role) if w not in stopwords]
+    if not target_tokens:
+        return True
+
+    for tok in target_tokens:
+        if tok not in doc_tokens:
+            return False
+
+    return True
+
+
 def _extract_claim_pattern(
     sub_q: str,
     chunk: dict[str, Any],
@@ -341,11 +431,14 @@ def _extract_claim_pattern(
                 discovered_options,
             )
 
-    # 5. Job specification queries (e.g. Q10, Q11)
+    # 5. Job specification queries (e.g. Q10, Q11, ADV-18)
     if any(
         k in q_lower
         for k in ["reports to", "report to", "salary", "compensation", "work mode", "location"]
     ):
+        if not _chunk_matches_query_role(q_lower, content):
+            return (None, discovered_options)
+
         # Reporting line
         if "reports to" in q_lower or "report to" in q_lower:
             m = re.search(r"Reports to:\s*([^\n\r]+)", content, re.I)
@@ -396,8 +489,21 @@ def _extract_claim_pattern(
                     discovered_options,
                 )
 
-    # 6. Pricing & Claims Limit queries (e.g. Q12)
-    if "cost" in q_lower or "price" in q_lower:
+    # 6. Pricing & Claims Limit queries (e.g. Q12, ADV-17)
+    warranty_domain_tokens = [
+        "warranty",
+        "coverage",
+        "plan",
+        "care",
+        "protection",
+        "service contract",
+        "extended",
+    ]
+    is_warranty_query = any(k in q_lower for k in ["warranty", "coverage", "protection"]) or (
+        ("cost" in q_lower or "price" in q_lower)
+        and any(k in q_lower for k in warranty_domain_tokens)
+    )
+    if is_warranty_query:
         # Multi-tier pricing
         m_multi = re.search(
             r"(\d+[- ]year[^\n:]*:\s*\d+%(?:[^\n]*\n\s*\d+[- ]year[^\n:]*:\s*\d+%)?)",
@@ -440,7 +546,10 @@ def _extract_claim_pattern(
                 discovered_options,
             )
 
-    if "claims" in q_lower or "limit" in q_lower:
+    if "claims" in q_lower or (
+        "limit" in q_lower
+        and any(k in q_lower for k in ["warranty", "coverage", "care", "claim", "plan"])
+    ):
         m_claims = re.search(
             r"maximum of\s*(\d+)\s*claims per product per year is allowed", content, re.I
         )

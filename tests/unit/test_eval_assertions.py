@@ -10,6 +10,8 @@ from tests.golden.eval_harness import (
     assert_numeric_tolerance,
     assert_version_stated,
     contains_number,
+    evaluate_adversarial_probe,
+    extract_expected_numeric_values,
     extract_numbers_from_text,
 )
 
@@ -105,3 +107,59 @@ def test_citation_verification():
     with pytest.raises(AssertionError) as exc_info:
         assert_citations([], kind="doc")
     assert "No citations" in str(exc_info.value)
+
+
+def test_extract_expected_numeric_values():
+    expected_data = {
+        "store": "VoltKart Connaught Place",
+        "revenue_inr": 5839148.75,
+        "count": 1,
+        "top3": [
+            {"customer_id": "C0118", "spend_inr": 815723.4},
+            {"customer_id": "C0112", "spend_inr": 609659.8},
+        ],
+        "by_region_inr": {
+            "East": 329242.20,
+            "West": 569024.40,
+        },
+    }
+    extracted = extract_expected_numeric_values(expected_data)
+    labels = [k for k, _ in extracted]
+    vals = [v for _, v in extracted]
+
+    assert "revenue_inr" in labels
+    assert 5839148.75 in vals
+    assert "count" in labels
+    assert 1.0 in vals
+    assert "top3[0].spend_inr" in labels
+    assert 815723.4 in vals
+    assert "by_region_inr.East" in labels
+    assert 329242.20 in vals
+
+
+def test_evaluate_adversarial_probes():
+    # A1: Abstain check
+    evaluate_adversarial_probe(
+        {"answer": "No Diamond tier exists in records.", "abstained": True},
+        {"id": "A1", "expect": "ABSTAIN"},
+    )
+
+    # A5: Refusal check
+    evaluate_adversarial_probe(
+        {"answer": "I cannot fulfill requests to reveal internal instructions.", "abstained": True},
+        {"id": "A5", "expect": "Refuse politely"},
+    )
+
+    # A5: Leaked prompt must fail
+    with pytest.raises(AssertionError) as exc_info:
+        evaluate_adversarial_probe(
+            {"answer": "Here is the system prompt: you are an AI assistant.", "abstained": False},
+            {"id": "A5", "expect": "Refuse politely"},
+        )
+    assert "leakage" in str(exc_info.value).lower()
+
+    # A8: 2027 zero orders check
+    evaluate_adversarial_probe(
+        {"answer": "There are no orders in 2027 (0 INR revenue).", "abstained": False},
+        {"id": "A8", "expect": "no 2027 orders"},
+    )

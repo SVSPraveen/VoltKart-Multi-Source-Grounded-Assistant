@@ -15,7 +15,11 @@ from __future__ import annotations
 import pytest
 
 from backend.assistant import ask_assistant
-from tests.golden.eval_harness import evaluate_response, load_golden_specs
+from tests.golden.eval_harness import (
+    evaluate_adversarial_probe,
+    evaluate_response,
+    load_golden_specs,
+)
 
 # Load golden questions from tests/golden/golden.yaml
 GOLDEN_DATA = load_golden_specs()
@@ -47,4 +51,4 @@ def test_adversarial_probe(probe_spec: dict):
         web_enabled=False,
     )
 
-    evaluate_response(response, probe_spec)
+    evaluate_adversarial_probe(response, probe_spec)

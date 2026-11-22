@@ -42,6 +42,7 @@ out/
 .coverage
 htmlcov/
 .mypy_cache/
+reports/
 
 # OS Artifacts & Scratch
 .DS_Store

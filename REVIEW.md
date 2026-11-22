@@ -465,3 +465,22 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Requirement traceability matrices must map 1:1 to the original numbering of the client specification and brief (C1: Chat UI, C2: File Upload, C3: Table QA, C4: Document QA, C5: Citations & Abstention, C6: Memory & Isolation, C7: Export PDF, B8: Web Search, B9: Multiple Chats, B10: Charts).
 - Check: Cross-check between `README.md` traceability table and `assignment/` brief.
 
+### R-071 — SQL query synthesis must support inverted extrema (lowest/bottom/least) alongside standard extrema
+- Status: observed (Adversarial Bug Investigation, 2026-11-22)
+- Context: In `backend/sql_agent.py`, queries asking for "lowest", "bottom", or "least" store revenue fell through the extrema planner into the all-store revenue aggregator, reporting total company revenue instead of identifying the lowest store.
+- Rule: Table QA analytical planners must explicitly support both ascending (lowest, bottom, least, min) and descending (highest, top, max, best) extrema ordering, ensuring inverted extrema questions generate `ORDER BY ... ASC LIMIT 1` queries and ground answer prose with the corresponding extrema qualifier.
+- Check: Unit test `test_table_qa_lowest_revenue_query` in `tests/unit/test_sql_agent.py`.
+
+### R-072 — Information extractors matching ambiguous financial terms must enforce explicit domain qualifying tokens
+- Status: observed (Adversarial Bug Investigation, 2026-11-22)
+- Context: In `backend/doc_agent.py`, warranty pricing extraction triggered on the token "cost" or "price" alone without checking for warranty context, causing corporate finance questions regarding "company profit margin and lease costs" to match and return warranty pricing tiers.
+- Rule: Claim extractors targeting domain-specific structures (such as warranty plans or insurance tiers) must require explicit domain qualifying keywords (warranty, coverage, plan, care, protection) before extracting prices or percentage costs.
+- Check: Unit test `test_adv17_warranty_pricing_domain_guard` in `tests/unit/test_documents.py`.
+
+### R-073 — Job specification and organizational claim extractors must validate query target role against document titles
+- Status: observed (Adversarial Bug Investigation, 2026-11-22)
+- Context: In `backend/doc_agent.py`, questions asking about "CEO compensation" or "Who does the CEO report to?" blindly extracted compensation and reporting manager lines from the Machine Learning Engineer job description.
+- Rule: Role and organizational specification extractors must extract and validate the user's targeted role against the document's role title, department, and synonyms, abstaining or continuing search if the roles conflict.
+- Check: Unit test `test_adv18_job_description_role_guard` in `tests/unit/test_documents.py`.
+
+

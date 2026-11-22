@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -227,6 +228,75 @@ def clean_project() -> int:
     return 0
 
 
+def run_fresh_clone_test() -> int:
+    """Implement Spec Section 10 & 14 V8 Fresh Clone Test.
+
+    1. Clones repository into an isolated temporary folder.
+    2. Initializes .env from .env.example.
+    3. Runs runner.py verify to assert all 7 verification layers pass in fresh clone.
+    4. Executes an end-to-end smoke query proving multi-source Q&A works untouched.
+    5. Cleans up temporary directory.
+    """
+    root = get_project_root()
+    py = get_venv_python()
+    temp_dir = Path(tempfile.mkdtemp(prefix="fresh_clone_test_"))
+    print("\n=======================================================")
+    print("  FRESH CLONE TEST (V8)")
+    print(f"  Cloning {root} -> {temp_dir}")
+    print("=======================================================\n")
+
+    try:
+        # Step 1: Git clone
+        print("[1/4] Executing git clone...")
+        code, dur, out = run_command(["git", "clone", str(root), str(temp_dir)])
+        if code != 0:
+            print(f"[FAIL] git clone failed ({code}):\n{out}")
+            return 1
+        print(f"  Git clone succeeded in {dur:.2f}s.")
+
+        # Step 2: Configure environment (.env from .env.example)
+        print("[2/4] Setting up .env from .env.example...")
+        env_ex = temp_dir / ".env.example"
+        env_file = temp_dir / ".env"
+        if env_ex.exists() and not env_file.exists():
+            shutil.copy(env_ex, env_file)
+        print("  Environment configuration ready.")
+
+        # Step 3: Run full verification suite in cloned repository
+        print("[3/4] Running 'python scripts/runner.py verify' in cloned workspace...")
+        code, dur, out = run_command([py, "scripts/runner.py", "verify"], cwd=temp_dir)
+        print(out)
+        if code != 0:
+            print(f"[FAIL] Verification failed in fresh clone in {dur:.2f}s.")
+            return 1
+        print(f"  Verification passed in {dur:.2f}s.")
+
+        # Step 4: Run end-to-end smoke test query
+        print("[4/4] Executing live multi-source assistant smoke query...")
+        smoke_script = (
+            "import sys;"
+            "from backend.assistant import ask_assistant;"
+            "res = ask_assistant('Which store had the highest revenue in 2025, and who manages it?');"
+            "ans = res.get('answer', '');"
+            "cits = res.get('citations', []);"
+            "print(f'Smoke Answer: {ans[:90]}...');"
+            "assert 'VoltKart Connaught Place' in ans or '5839148.75' in ans or 'Vikram Sethi' in ans, 'Answer missing key entities';"
+            "assert len(cits) > 0, 'Citations missing in response';"
+            "print('Smoke test asserted successfully!')"
+        )
+        code, dur, out = run_command([py, "-c", smoke_script], cwd=temp_dir)
+        print(out)
+        if code != 0:
+            print(f"[FAIL] Smoke test failed in fresh clone:\n{out}")
+            return 1
+
+        print("\n[SUCCESS] FRESH CLONE TEST PASSED: Repository clones and verifies untouched!")
+        return 0
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="VoltKart Project Runner")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
@@ -273,6 +343,9 @@ def main() -> int:
     subparsers.add_parser("eval", help="Live golden evals (Phase 3+)")
     subparsers.add_parser("e2e", help="Browser E2E tests (Phase 5+)")
     subparsers.add_parser("fresh-clone-test", help="Fresh clone test (Phase 8)")
+    subparsers.add_parser(
+        "export-eval", help="Official evaluation PDF export and verification (Phase 8)"
+    )
 
     args = parser.parse_args()
     py = get_venv_python()
@@ -331,8 +404,13 @@ def main() -> int:
         print(out)
         return code
     elif args.subcommand in ("fresh-clone-test",):
-        print(f"Target '{args.subcommand}' will be configured in subsequent phases.")
-        return 0
+        return run_fresh_clone_test()
+    elif args.subcommand in ("export-eval",):
+        code, _, out = run_command(
+            [py, str(root / "scripts" / "export_evaluation_pdfs.py")], cwd=root
+        )
+        print(out)
+        return code
 
     return 0
 

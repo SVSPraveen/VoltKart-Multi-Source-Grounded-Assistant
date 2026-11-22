@@ -1,7 +1,7 @@
 # Makefile for VoltKart Multi-Source Chat Assistant
 # Cross-platform: delegates directly to scripts/runner.py
 
-.PHONY: help setup dev verify test golden lint format no-hardcode variants clean eval e2e fresh-clone-test
+.PHONY: help setup dev verify test golden lint format no-hardcode variants clean eval e2e fresh-clone-test export-eval
 
 # Detect python executable
 ifeq ($(OS),Windows_NT)
@@ -63,3 +63,6 @@ e2e:
 
 fresh-clone-test:
 	$(PYTHON) scripts/runner.py fresh-clone-test
+
+export-eval:
+	$(PYTHON) scripts/runner.py export-eval

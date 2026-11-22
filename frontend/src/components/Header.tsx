@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
         <h1 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
           {chatTitle || 'Conversation'}
         </h1>
-        <span style={{ fontSize: '11px', color: 'var(--text-dim)', padding: '2px 6px', background: 'var(--bg-surface)', borderRadius: '3px' }}>
+        <span className="header-chat-id" data-testid="header-chat-id" style={{ fontSize: '11px', color: 'var(--text-dim)', padding: '2px 6px', background: 'var(--bg-surface)', borderRadius: '3px' }}>
           {chatId}
         </span>
       </div>

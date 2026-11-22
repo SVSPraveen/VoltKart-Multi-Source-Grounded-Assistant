@@ -173,6 +173,7 @@ def generate_chat_pdf(chat_id: str) -> bytes:
     meta_text = (
         f"<b>Chat ID:</b> {chat_id} &nbsp;|&nbsp; "
         f"<b>Title:</b> {_clean_text(chat_info.get('title', 'Chat'))} &nbsp;|&nbsp; "
+        f"<b>Currency:</b> INR (₹) &nbsp;|&nbsp; "
         f"<b>Exported:</b> {now_utc} (UTC)"
     )
     story.append(Paragraph(meta_text, meta_style))

@@ -116,6 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <div
                 key={c.chat_id}
+                data-chat-id={c.chat_id}
                 onClick={() => onSelectChat(c.chat_id)}
                 style={{
                   display: 'flex',

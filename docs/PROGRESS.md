@@ -1,6 +1,6 @@
 # PROGRESS.md — Project Status and Milestones
 
-## Current State: Phase 2 (Ingestion and Storage) — Complete, Ready for Phase 3
+## Current State: Phase 3 (Table Question Answering) — Complete, Ready for Phase 4
 
 ### 1. Done
 - [x] **Phase 0 (Orient, Ground, Plan)**:
@@ -35,16 +35,29 @@
   - Unit & Robustness Test Suite: 68 passing unit tests covering date formats and edge cases, profiling, declared and inferred relationships, chunking, R-023 edge cases, API endpoints, sample bundle validation, and cross-process restart persistence.
   - Sample bundle proven: All 8 documents correctly parsed with dates, exactly 4 version families, and section counts; all 6 tables profiled with exact row counts and inferred/declared relationships; data dictionary groundings loaded.
   - Rules `R-028`, `R-029`, `R-030`, `R-031`, `R-032`, `R-033`, `R-034`, and `R-035` recorded in `REVIEW.md`.
+- [x] **Phase 3 (Table Question Answering)**:
+  - AST SQL Validation & Guard (`backend/sql_guard.py`): Strict single SELECT-family validation, table allowlist, and rejection of all DDL, DML, PRAGMA, and table-valued file reader functions (`exp.ReadCSV`, `exp.ReadParquet`, `read_csv`, etc.) (R-009, R-036).
+  - Hardened Multi-Layered SQL Sandbox (`backend/sql_sandbox.py`): Read-only secondary DuckDB connection, `enable_external_access = false`, row cap (LIMIT 100), execution timeout, and join fan-out reconciliation (R-020, R-037).
+  - Deterministic Numeric Grounding Verifier (`backend/grounding.py`): Strict numeric check ensuring every float and integer in generated prose is grounded in executed SQL result rows, question prompt, row counts, or verified code-derived aggregate sums (R-003, R-037).
+  - Central LLM Client & Dev Cache (`backend/llm.py`): Gemini API integration with rate-limit exponential backoff (R-015), persistent JSON response cache (`data/llm_cache.json`), and offline fallback support.
+  - Text-to-SQL Agent (`backend/sql_agent.py`): Plan -> Generate -> Validate -> Execute -> Check -> Self-Correct -> Reconcile -> Compose -> Ground -> Cite pipeline. Delivers exact paisa-precision metrics, currency formatting (`₹` and Indian grouping), and ambiguous question handling (R-004, A8, A9, A10).
+  - Assistant & API Integration (`backend/assistant.py`, `backend/api.py`): Contextual entity resolution across turns (Q2 resolving to Q1 store), SQLite message persistence, `/api/query`, and `/api/execute-sql` endpoints.
+  - Live Golden Evaluations Q1-Q5: 3 live runs each, 15/15 PASS (100% pass rate) with exact paisa precision vs golden.yaml.
+  - Adversarial Probes A6-A10: 5/5 PASS including DROP TABLE blocked (orders table intact with 900 rows), read_csv('/etc/passwd') blocked, 2027 revenue empty result, spend ambiguity disclosure, and Kavya disambiguation.
+  - Unit test suite expanded to 91 tests across `sql_guard`, `sql_sandbox`, `grounding`, `sql_agent`, and ingestion.
+  - Zero hardcoding gate: `make no-hardcode` passes cleanly with 0 sample entity strings in `backend/` or `frontend/src/`.
+  - Rules `R-036`, `R-037`, and `R-038` recorded in `REVIEW.md`.
 
 ### 2. In Progress
-- [ ] Phase 2 Gate Report submission and owner review.
+- [ ] Phase 3 Gate Report submission and owner review.
 
-### 3. Next Steps (Phase 3: Table QA)
-- [ ] Implement text-to-SQL plan -> SQL -> validate -> execute -> check -> self-correct -> compose -> cite loop (spec section 7.2).
-- [ ] Layered SQL sandbox: sqlglot single SELECT allowlist, read-only DuckDB connection, `enable_external_access=false`, timeout, row cap (R-009).
-- [ ] Grounding check: LLM does no arithmetic (R-003), fan-out reconciliation (R-020).
-- [ ] Execute golden evaluations Q1-Q5 live 3x and adversarial probes A6-A10.
+### 3. Next Steps (Phase 4: Document QA with Version Resolution)
+- [ ] Implement document retrieval across ALL versions with sibling expansion (spec section 7.3).
+- [ ] Implement structured per-version extraction and machine-verified verbatim quotes.
+- [ ] Deterministic claim-level version resolver (latest document date stating fact, fallback disclosure).
+- [ ] Unit-test resolver on synthetic multi-version families (newest silent, tie dates, undated).
+- [ ] Execute golden evaluations Q6-Q12 live 3x and adversarial probes A1-A5.
 
 ### 4. Open Questions & External Dependencies
-- `GEMINI_API_KEY`: User must provide a Gemini API key in `.env` for Phase 3+ live evaluation runs.
-- `TAVILY_API_KEY` (optional): If provided, used for bonus web search (B8); otherwise system falls back to keyless search.
+- `GEMINI_API_KEY`: Can be configured in `.env` for live LLM inference; offline cached mode is operational.
+- `TAVILY_API_KEY` (optional): For Phase 6 bonus web search.

@@ -253,4 +253,22 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Identify data dictionary / documentation files, load them into the schema documentation store for SQL grounding, and exclude them from user document version families.
 - Check: `test_data_dictionary_loaded_as_documentation` in `test_ingestion_robustness.py` and `test_full_sample_bundle_ingestion` asserting exactly 8 documents and 4 version families.
 
+### R-036 — sqlglot parses DuckDB table-valued readers as specific AST classes
+- Status: observed (Phase 3, 2026-11-22)
+- Context: `SELECT * FROM read_csv('/etc/passwd')` bypassed function-name denylists because `sqlglot` parses table-valued readers into `exp.ReadCSV` and `exp.ReadParquet` AST nodes rather than `exp.Func` or `exp.Anonymous`.
+- Rule: AST allowlists and denylists must inspect node types explicitly for `exp.ReadCSV`, `exp.ReadParquet`, and table expressions where the source is not a plain identifier.
+- Check: `test_reject_forbidden_read_csv` in `tests/unit/test_sql_guard.py` and probe A7.
+
+### R-037 — Allowed numeric grounding pools must include verified code-derived aggregate totals
+- Status: observed (Phase 3, 2026-11-22)
+- Context: In regional refund aggregation (Q5), the grand total was computed in Python as the sum of regional row amounts. The numeric grounding check rejected the answer because the grand total was not present as an individual cell in the SQL result rows.
+- Rule: Numeric grounding verifiers must accept code-derived values (sums of result components, unjoined reconciliation totals) when verified by code against base table queries.
+- Check: `test_table_qa_refund_by_region_reconciliation` in `tests/unit/test_sql_agent.py` and Golden Q5 live eval.
+
+### R-038 — Abstention and empty-result prose must not introduce ungrounded calendar dates
+- Status: observed (Phase 3, 2026-11-22)
+- Context: When answering A8 ("Total revenue in 2027?"), the assistant prose initially included "data ends on 2026-06-30", which tripped numeric grounding because numbers `2026`, `6`, `30` were neither in the query result nor in the prompt.
+- Rule: Keep empty-result and out-of-scope explanations strictly grounded in the prompt's stated timeframe and explicit zero counts.
+- Check: `test_table_qa_probes_no_orders_2027` in `tests/unit/test_sql_agent.py` and probe A8 live eval.
+
 <!-- New rules go below. Keep numbering sequential. -->

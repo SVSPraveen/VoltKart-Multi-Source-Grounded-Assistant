@@ -203,7 +203,12 @@ def synthesize_sql_query(
     # Case D: Top customers by spend at a store (e.g. Q2 follow-up) or all-time (A9)
     if "customer" in q_lower and "spend" in q_lower:
         year_match = re.search(r"\b(20\d{2})\b", question)
-        year = year_match.group(1) if year_match else "2025"
+        if year_match:
+            year = year_match.group(1)
+        elif context_entities and "year" in context_entities:
+            year = str(context_entities["year"])
+        else:
+            year = "2025"
         store_id = None
         if context_entities and "store_id" in context_entities:
             store_id = context_entities["store_id"]

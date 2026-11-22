@@ -91,20 +91,34 @@ def _handle_order_return_eligibility(question: str) -> MixedQAResult | None:
 
     for c in policy_chunks:
         content = c.get("content", "")
-        if "Smartphones may be returned within 7 days" in content:
+        # Dynamically extract smartphone exception quote from chunk text (R-046)
+        m_smart = re.search(
+            r"([^\.\n]*Smartphones may be returned within 7 days[^\.\n]*\.)",
+            content,
+            re.IGNORECASE,
+        )
+        if m_smart:
             best_doc_chunk = c
             file_name = c.get("file_name", file_name)
             doc_date = c.get("doc_date", doc_date)
-            best_verbatim_quote_1 = (
-                "Exception: Smartphones may be returned within 7 days of delivery "
-                "for all membership tiers."
+            best_verbatim_quote_1 = m_smart.group(1).strip()
+
+            # Dynamically extract restocking fee quote from chunk text (R-046)
+            m_fee = re.search(
+                r"(A restocking fee of 10%[^\.\n]*\.[^\.\n]*waived for Platinum members\.)",
+                content,
+                re.IGNORECASE,
             )
-            if "restocking fee of 10%" in content:
-                best_verbatim_quote_2 = (
-                    "A restocking fee of 10% of the invoice value applies to opened laptops, "
-                    "televisions and smartphones returned for non-defect reasons. "
-                    "The restocking fee is waived for Platinum members."
+            if m_fee:
+                best_verbatim_quote_2 = m_fee.group(1).strip()
+            else:
+                m_fee_single = re.search(
+                    r"(A restocking fee of 10%[^\.\n]*\.)",
+                    content,
+                    re.IGNORECASE,
                 )
+                if m_fee_single:
+                    best_verbatim_quote_2 = m_fee_single.group(1).strip()
             break
 
     # Extract user-supplied days from question if present (e.g. 12 days)

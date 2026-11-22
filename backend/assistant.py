@@ -94,22 +94,39 @@ def _resolve_context_entities(chat_id: str, question: str) -> tuple[dict[str, An
 
     # Scan previous assistant messages in reverse
     for msg in reversed(messages):
-        if msg.get("role") == "assistant":
-            meta = msg.get("metadata", {})
-            if "entities" in meta and isinstance(meta["entities"], dict):
-                entities.update(meta["entities"])
-            citations = msg.get("citations", [])
-            for c in citations:
-                for row in c.get("result_rows", []):
-                    if isinstance(row, dict):
-                        if "store_id" in row and "last_store_id" not in entities:
-                            entities["last_store_id"] = row["store_id"]
-                        if "store_name" in row and "last_store_name" not in entities:
-                            entities["last_store_name"] = row["store_name"]
+        meta = msg.get("metadata", {})
+        if isinstance(meta, dict) and "entities" in meta and isinstance(meta["entities"], dict):
+            for k, v in meta["entities"].items():
+                if k not in entities:
+                    entities[k] = v
+
+        citations = msg.get("citations", [])
+        for c in citations:
+            for row in c.get("result_rows", []):
+                if isinstance(row, dict):
+                    if "store_id" in row and "last_store_id" not in entities:
+                        entities["last_store_id"] = row["store_id"]
+                    if "store_name" in row and "last_store_name" not in entities:
+                        entities["last_store_name"] = row["store_name"]
+
+        # Also search previous turn text for year if not yet resolved
+        if "year" not in entities:
+            m_yr = re.search(r"\b(202\d)\b", msg.get("content", ""))
+            if m_yr:
+                entities["year"] = m_yr.group(1)
+
+    # Check if current question explicitly provides a year
+    q_yr = re.search(r"\b(202\d)\b", question)
+    if q_yr:
+        entities["year"] = q_yr.group(1)
 
     q_lower = question.lower()
     if ("that store" in q_lower or "the store" in q_lower) and "last_store_id" in entities:
-        interpreted_as = f"store_id = '{entities['last_store_id']}', year = 2025"
+        target_year = entities.get("year")
+        if target_year:
+            interpreted_as = f"store_id = '{entities['last_store_id']}', year = {target_year}"
+        else:
+            interpreted_as = f"store_id = '{entities['last_store_id']}'"
 
     return entities, interpreted_as
 
@@ -226,10 +243,24 @@ def ask_assistant(
         }
 
     # 3. Conversational memory summary turn (spec section 7.5 / Q20)
-    if any(
-        k in q_lower
-        for k in ["summarize what we discussed", "recap our conversation", "what did we discuss"]
-    ):
+    is_summary_turn = any(
+        phrase in q_lower
+        for phrase in [
+            "summarize what we discussed",
+            "recap our conversation",
+            "what did we discuss",
+            "summarize our chat",
+            "summarize our conversation",
+            "summarize the discussion",
+            "summarize what was discussed",
+        ]
+    ) or (
+        any(k in q_lower for k in ["summariz", "recap"])
+        and any(
+            k in q_lower for k in ["discuss", "conversation", "chat", "so far", "talked", "history"]
+        )
+    )
+    if is_summary_turn:
         return _summarize_chat_history(chat_id)
 
     # 4. Contextualization & entity resolution from previous turns
@@ -325,6 +356,11 @@ def ask_assistant(
                     extracted_entities["store_id"] = first_row["store_id"]
                 if "store_name" in first_row:
                     extracted_entities["store_name"] = first_row["store_name"]
+                yr_match = re.search(r"\b(202\d)\b", clean_q) or re.search(
+                    r"\b(202\d)\b", qa_result.sql
+                )
+                if yr_match:
+                    extracted_entities["year"] = yr_match.group(1)
                 if extracted_entities:
                     msg_metadata["entities"] = extracted_entities
 
@@ -385,6 +421,20 @@ def ask_assistant(
             "is_ambiguous": qa_result.is_ambiguous,
             "reconciled": qa_result.reconciled,
         }
+        if qa_result.query_result and qa_result.query_result.rows:
+            first_row = qa_result.query_result.rows[0]
+            extracted_entities = {}
+            if "store_id" in first_row:
+                extracted_entities["store_id"] = first_row["store_id"]
+            if "store_name" in first_row:
+                extracted_entities["store_name"] = first_row["store_name"]
+            yr_match = re.search(r"\b(202\d)\b", clean_q) or re.search(
+                r"\b(202\d)\b", qa_result.sql
+            )
+            if yr_match:
+                extracted_entities["year"] = yr_match.group(1)
+            if extracted_entities:
+                msg_metadata["entities"] = extracted_entities
         if interpreted_as:
             msg_metadata["interpreted_as"] = interpreted_as
         asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"

@@ -355,5 +355,23 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Provide pure WebAssembly/JavaScript execution fallbacks (`@rollup/wasm-node`) and automated patching in frontend build toolchains so builds succeed deterministically across restricted enterprise and classroom environments.
 - Check: `frontend/patch-rollup.js` and clean execution of `npm run build` in `frontend/`.
 
+### R-053 — Contextual entity memos must resolve conversational timeframes dynamically from turn history rather than hardcoding default years
+- Status: observed (Phase 5, 2026-11-22)
+- Context: In `backend/assistant.py`, follow-up queries at "that store" hardcoded `year = 2025` in `interpreted_as` and `sql_agent.py`, which corrupted queries when the previous turn discussed non-2025 data (e.g. 2024 or 2026).
+- Rule: Extract timeframes and years dynamically from previous turn questions and query metadata into `entities`, and only include the year when one was established in conversation.
+- Check: `test_chat_and_followup_persistence_across_process_restart` in `tests/unit/test_persistence.py`.
+
+### R-054 — Multi-source cross-modal agent quotes must be dynamically extracted from document chunk content
+- Status: observed (Phase 5, 2026-11-22)
+- Context: In `backend/mixed_agent.py`, smartphone return exception quotes and restocking fee clauses were hardcoded string literals, violating R-046 and breaking generalization on arbitrary documents.
+- Rule: Dynamically extract verbatim quotes from chunk text using substring or regex matching on the chunk content itself.
+- Check: Unit tests in `tests/unit/test_no_hardcode.py` and Q13/Q14 evaluations.
+
+### R-055 — Process restart persistence tests must verify chat history and contextual follow-ups across separate process lifecycles
+- Status: observed (Phase 5, 2026-11-22)
+- Context: Initial persistence testing only verified table and document metadata across subprocess reboot, leaving chat session rows, message status/citations, and cross-turn follow-up resolution unverified across actual process restarts.
+- Rule: Always verify chat sessions, message persistence, contextual entity resolution, and conversational summaries across genuine OS subprocess boundaries.
+- Check: `test_chat_and_followup_persistence_across_process_restart` in `tests/unit/test_persistence.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->
 

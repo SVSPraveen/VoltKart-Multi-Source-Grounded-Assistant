@@ -31,9 +31,9 @@
   - CORE COMPLETE GATE Verification:
     - Live evaluation of all 15 core questions (Q1–Q14 and Q20) across 3 consecutive live runs: 15/15 PASS on all 3 runs (45/45 = 100% pass rate).
     - Adversarial probes A1–A10: 10/10 PASS.
-    - Unit test suite: 114/114 PASS.
+    - Unit test suite: 115/115 PASS (including true process restart persistence test covering chat history, follow-up entity resolution, and summary across OS subprocess reboot).
     - Zero hardcoding gate: `make no-hardcode` passes cleanly across all 30 files in `backend/` and `frontend/src/`.
-    - Rules `R-049`, `R-050`, `R-051`, `R-052` added to `REVIEW.md`.
+    - Rules `R-049`, `R-050`, `R-051`, `R-052`, `R-053`, `R-054`, `R-055` added to `REVIEW.md`.
 
 ### 2. In Progress
 - [ ] Phase 5 Gate Report submission and owner review.

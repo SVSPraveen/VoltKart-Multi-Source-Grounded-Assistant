@@ -94,8 +94,20 @@ def test_responsive_screenshots_and_layout(live_server: str):
             page = browser.new_page(viewport={"width": width, "height": height})
             page.goto(live_server, wait_until="networkidle")
 
-            # Check that root container rendered
+            # Check that root container and core instrument-panel controls rendered
             assert page.locator("#root").count() > 0
+
+            # Verify presence of core workspace controls
+            assert page.locator("button:has-text('Export PDF')").count() > 0
+            assert page.locator("button:has-text('Ingestion Card')").count() > 0
+            assert page.locator("textarea").count() > 0
+            assert page.locator("text=Web Search").count() > 0
+            assert page.locator("button:has-text('Send')").count() > 0
+            assert page.locator("button:has-text('Upload Files')").count() > 0
+
+            # On mobile viewport (360px), verify mobile drawer/menu toggle exists
+            if width <= 768:
+                assert page.locator(".header-menu-btn").count() > 0
 
             # Capture screenshot
             out_path = SCREENS_DIR / filename

@@ -101,3 +101,75 @@ print("PERSISTENCE_VERIFIED")
 
     assert res.returncode == 0, f"Process restart check failed: {res.stderr}"
     assert "PERSISTENCE_VERIFIED" in res.stdout
+
+
+def test_chat_and_followup_persistence_across_process_restart():
+    """Verify chat sessions, messages, and follow-up contextualization survive process termination (spec 7.5, C6)."""
+    from backend.assistant import ask_assistant
+
+    reset_storage()
+    chat_id = "test_restart_chat_followup"
+
+    # Step 1: Turn 1 in current process
+    t1_res = ask_assistant(
+        "Which store had the highest revenue in 2025, and who manages it?",
+        chat_id=chat_id,
+    )
+    assert "Vikram Sethi" in t1_res["answer"]
+    assert "S04" in str(t1_res.get("metadata", {}))
+
+    # Step 2: Spawn independent Python subprocess to simulate process termination and reboot
+    followup_script = """
+import sys
+from pathlib import Path
+root = Path.cwd()
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
+
+import sqlite3
+from backend.assistant import ask_assistant
+from backend.storage import SQLITE_DB_PATH
+
+chat_id = sys.argv[1]
+
+# 1. Verify SQLite chat row and message history exist in fresh process
+conn = sqlite3.connect(str(SQLITE_DB_PATH))
+chat_row = conn.execute("SELECT chat_id FROM chats WHERE chat_id = ?", (chat_id,)).fetchone()
+assert chat_row is not None, f"Chat session {chat_id} not found in SQLite"
+
+msg_rows = conn.execute("SELECT role, content, status FROM messages WHERE chat_id = ? ORDER BY created_at", (chat_id,)).fetchall()
+assert len(msg_rows) >= 2, f"Expected >= 2 messages, found {len(msg_rows)}"
+assert msg_rows[0][0] == "user"
+assert msg_rows[1][0] == "assistant"
+assert msg_rows[1][2] == "completed"
+conn.close()
+
+# 2. Execute follow-up turn in fresh process requiring contextualization from disk
+t2_res = ask_assistant(
+    "Who were the top 3 customers by spend at that store in 2025?",
+    chat_id=chat_id,
+)
+assert t2_res.get("interpreted_as") is not None, "Interpreted_as metadata missing in follow-up turn"
+assert "S04" in t2_res["interpreted_as"], f"Expected S04 in interpreted_as, got {t2_res['interpreted_as']}"
+assert "Aarav Kulkarni" in t2_res["answer"], f"Expected Aarav Kulkarni in answer: {t2_res['answer']}"
+
+# 3. Execute conversational summary turn (Q20 core requirement) in fresh process
+t3_res = ask_assistant(
+    "Summarize what we discussed so far.",
+    chat_id=chat_id,
+)
+assert "Summary" in t3_res["answer"]
+assert "Vikram Sethi" in t3_res["answer"] or "highest revenue" in t3_res["answer"].lower()
+
+print("CHAT_FOLLOWUP_PERSISTENCE_VERIFIED")
+"""
+
+    res = subprocess.run(
+        [sys.executable, "-c", followup_script, chat_id],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert res.returncode == 0, f"Followup restart check failed: {res.stderr}\nOutput: {res.stdout}"
+    assert "CHAT_FOLLOWUP_PERSISTENCE_VERIFIED" in res.stdout

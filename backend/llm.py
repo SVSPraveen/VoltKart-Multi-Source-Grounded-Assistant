@@ -69,6 +69,8 @@ def _save_cache() -> None:
 
 def is_llm_available() -> bool:
     """Check if a Gemini API key or local Ollama instance is configured."""
+    if "PYTEST_CURRENT_TEST" in os.environ and not os.getenv("RUN_LIVE_LLM_TESTS"):
+        return False
     load_env_file()
     provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     if provider == "ollama":
@@ -106,6 +108,10 @@ def generate_llm_response(
     cache_key = _get_cache_key(active_model, prompt, system_prompt, temperature)
     if cache_key in _DEV_CACHE:
         return _DEV_CACHE[cache_key]
+
+    # Automated test isolation: unit tests run deterministically offline
+    if "PYTEST_CURRENT_TEST" in os.environ and not os.getenv("RUN_LIVE_LLM_TESTS"):
+        return None
 
     # 2. Local Ollama generation
     if provider == "ollama":

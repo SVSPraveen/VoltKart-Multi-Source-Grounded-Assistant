@@ -64,13 +64,13 @@ To eliminate these failure modes, VoltKart is built upon **five non-negotiable t
 A complete, production-grade 10–14 minute master presentation script and live cue sheet is available in:  
 📄 **[`docs/EXPLAINER_VIDEO_MASTER.md`](docs/EXPLAINER_VIDEO_MASTER.md)**
 
-### Required Presentation Structure
-1. **1-Minute Introduction (0:00 – 1:00)**: Who you are (Praveen), background in backend systems & AI architectures, problem statement, and the 5 truth invariants.
-2. **Live Walkthrough in One Continuous Take (1:00 – 6:30)**: Starting from an empty app with zero files $\rightarrow$ Uploading 6 CSV tables and 8 documents $\rightarrow$ Reviewing Ingestion Card $\rightarrow$ Relational Table QA with executed SQL $\rightarrow$ Inline SVG Chart $\rightarrow$ `+ New Chat` header action & automatic question titling $\rightarrow$ Multi-version policy fallback resolution $\rightarrow$ Server-gated web search toggle $\rightarrow$ Publication-grade PDF export.
-3. **Architecture Walkthrough (6:30 – 8:30)**: Following query lifecycle from UI through SSE, Contextualizer, Router, Dual Engines, Grounding Validator, to ReportLab PDF.
-4. **Code Walkthrough (8:30 – 11:00)**: Inspecting `backend/sql_sandbox.py`, `backend/version_resolver.py`, `backend/storage.py`, and `backend/export_pdf.py`.
-5. **Design Decision & Rejected Alternative (11:00 – 12:30)**: Deterministic code-level claim resolution vs retrieval-time date filtering / prompt reconciliation.
-6. **Where System Fails & Known Limitations (12:30 – 14:00)**: Real failure example (unnormalized categorical slang returning 0 rows), mitigation, and 7-layer verification proof.
+### Presentation Structure
+1. **Introduction & Engineering Motivation**: Personal introduction (Praveen), background in backend systems & production AI architectures, problem statement, and the 5 non-negotiable truth invariants.
+2. **Live Walkthrough in One Continuous Take**: Starting from an empty app with zero files $\rightarrow$ Uploading 6 CSV tables and 8 documents $\rightarrow$ Reviewing Ingestion Card $\rightarrow$ Relational Table QA with executed SQL $\rightarrow$ Inline SVG Chart $\rightarrow$ `+ New Chat` header action & automatic question titling $\rightarrow$ Multi-version policy fallback resolution $\rightarrow$ Server-gated web search toggle $\rightarrow$ Publication-grade PDF export.
+3. **Architecture Walkthrough**: Following query lifecycle from UI through SSE, Contextualizer, Router, Dual Engines, Grounding Validator, to ReportLab PDF.
+4. **Deep Code Walkthrough**: Inspecting `backend/sql_sandbox.py`, `backend/version_resolver.py`, `backend/storage.py`, and `backend/export_pdf.py`.
+5. **Design Decision & Rejected Alternative**: Deterministic code-level claim resolution vs retrieval-time date filtering / prompt reconciliation.
+6. **Failure Modes & Known Limitations**: Real failure example (unnormalized categorical slang returning 0 rows), mitigation, and 7-layer verification proof.
 
 ---
 

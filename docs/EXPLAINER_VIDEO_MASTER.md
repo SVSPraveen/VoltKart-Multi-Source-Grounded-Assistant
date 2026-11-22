@@ -26,22 +26,22 @@
   ```
   Then refresh `http://localhost:5173/` in your browser. The app will be pristine: no files, no chats, clean slate.
 
-### B. Timing & Section Roadmap (10 to 14 Minutes)
+### B. Presentation Flow & Visual Plan
 
-| Section | Timing | Screen / Visual Target | Key Action / Spoken Focus |
-|---|---|---|---|
-| **1. Intro** | 0:00 – 1:00 | Webcam ON + App Header | Who you are (Praveen), what you built, 5 non-negotiable truth invariants. |
-| **2. Live Walkthrough** | 1:00 – 6:30 | Browser (`http://localhost:5173/`) in **one continuous take** | Empty state $\rightarrow$ Upload dataset $\rightarrow$ Ingestion card $\rightarrow$ Table analytics $\rightarrow$ Inline chart $\rightarrow$ Auto chat titling $\rightarrow$ Versioned Document QA $\rightarrow$ Web Search gate $\rightarrow$ PDF export. |
-| **3. Architecture** | 6:30 – 8:30 | Architecture Diagram (`docs/ARCHITECTURE.md`) | Follow query flow: Router $\rightarrow$ Sandboxed Tabular / Sibling Document / Web $\rightarrow$ Evidence Assembly $\rightarrow$ SSE stream. |
-| **4. Code Walkthrough** | 8:30 – 11:00 | VS Code (`backend/`) | Open exact files: `sql_sandbox.py` (AST & fan-out), `version_resolver.py` (verbatim quotes), `storage.py` (chat isolation & auto-titling), `export_pdf.py` (ReportLab). |
-| **5. Design Decision** | 11:00 – 12:30 | Diagram or `version_resolver.py` | Claim-level code resolution vs retrieval-time date-filtering or LLM prompting. |
-| **6. Where It Fails** | 12:30 – 14:00 | Browser or Terminal (`docs/KNOWN_LIMITATIONS.md`) | Real reproduced failure (unnormalized category slang), mitigation, and conclusion. |
+| Section | Visual Focus | Key Action & Talking Points |
+|---|---|---|
+| **1. Intro** | Webcam ON + App Header | Personal introduction (Praveen), system goal, and 5 non-negotiable truth invariants. |
+| **2. Live Walkthrough** | Browser (`http://localhost:5173/`) in **one continuous take** | Empty state $\rightarrow$ Upload dataset $\rightarrow$ Ingestion card $\rightarrow$ Table analytics $\rightarrow$ Inline chart $\rightarrow$ Auto chat titling $\rightarrow$ Versioned Document QA $\rightarrow$ Web Search gate $\rightarrow$ PDF export. |
+| **3. Architecture** | Architecture Diagram (`docs/ARCHITECTURE.md`) | Query execution lifecycle: Router $\rightarrow$ Sandboxed Tabular / Sibling Document / Web $\rightarrow$ Evidence Assembly $\rightarrow$ SSE stream. |
+| **4. Code Walkthrough** | VS Code (`backend/`) | Deep dive into source files: `sql_sandbox.py` (AST & fan-out), `version_resolver.py` (verbatim quotes), `storage.py` (chat isolation & auto-titling), `export_pdf.py` (ReportLab). |
+| **5. Design Decision** | Diagram / `version_resolver.py` | Claim-level code resolution vs retrieval-time date-filtering or LLM prompting. |
+| **6. Where It Fails** | Browser / Terminal (`docs/KNOWN_LIMITATIONS.md`) | Real reproduced failure (unnormalized category slang), mitigation, and verification proof. |
 
 ---
 
 ## 2. Word-for-Word Video Script
 
-### Part 1: 1-Minute Introduction (0:00 – 1:00)
+### Part 1: Introduction & Engineering Motivation
 **Visual Setup**: Full screen on webcam, or webcam in corner with the clean VoltKart UI at `http://localhost:5173/` in the background.
 
 > **Spoken Audio**:  
@@ -60,10 +60,10 @@
 
 ---
 
-### Part 2: Live Walkthrough in One Continuous Take (1:00 – 6:30)
+### Part 2: Live Walkthrough in One Continuous Take
 **Visual Setup**: Full browser view of `http://localhost:5173/`.
 
-#### Step 1: Zero-State & File Upload (1:00 – 2:00)
+#### Step 1: Zero-State & Ingestion Profiling
 > **Action**: Hover over the empty sidebar and empty chat area.  
 > **Spoken Audio**:  
 > *"Here is the application starting from a completely empty state. Notice the instrument-panel design: warm neutral paper tones, high-contrast monospace typography, and zero distracting AI gradients or glassmorphism.*
@@ -81,7 +81,7 @@
 
 ---
 
-#### Step 2: Table Analytics & Grounded Charts (2:00 – 3:30)
+#### Step 2: Table Analytics & Grounded Charts
 > **Action**: Click in chat input.  
 > **Copy-Paste Query 1**:  
 > ```text
@@ -111,7 +111,7 @@
 
 ---
 
-#### Step 3: Header New Chat, Auto-Titling & Versioned Document QA (3:30 – 4:45)
+#### Step 3: Session Management, Auto-Titling & Versioned Document QA
 > **Action**: Click `+ New Chat` in the top Header or Sidebar.  
 > **Spoken Audio**:  
 > *"Notice the new `+ New Chat` button right here in the header. Clicking it creates a clean, isolated conversation session.  
@@ -137,7 +137,7 @@
 
 ---
 
-#### Step 4: Server-Gated Web Search & PDF Export (4:45 – 6:30)
+#### Step 4: Server-Gated Web Search & PDF Export
 > **Action**: Show the 'Web Search' checkbox in the composer. Ensure it is UNCHECKED.  
 > **Copy-Paste Query 4**:  
 > ```text
@@ -166,7 +166,7 @@
 
 ---
 
-### Part 3: Architecture Walkthrough (6:30 – 8:30)
+### Part 3: Architecture Walkthrough
 **Visual Setup**: Display `docs/ARCHITECTURE.md` showing the Mermaid diagram.
 
 ```mermaid
@@ -228,7 +228,7 @@ flowchart TD
 
 ---
 
-### Part 4: Code Walkthrough (8:30 – 11:00)
+### Part 4: Deep Code Walkthrough
 **Visual Setup**: VS Code open with project files.
 
 #### 1. Table Joins & Sandbox Defense
@@ -255,7 +255,7 @@ flowchart TD
 
 ---
 
-### Part 5: One Design Decision & Rejected Alternative (11:00 – 12:30)
+### Part 5: Core Design Decision & Trade-Off Analysis
 **Visual Setup**: VS Code open at `backend/version_resolver.py` or Architecture Diagram.
 
 > **Spoken Audio**:  
@@ -274,7 +274,7 @@ flowchart TD
 
 ---
 
-### Part 6: Where System Fails & Known Limitations (12:30 – 14:00)
+### Part 6: Failure Modes, Known Limitations & Defense
 **Visual Setup**: Display [docs/KNOWN_LIMITATIONS.md](file:///c:/Users/svspr/OneDrive/Desktop/Codemonk%20Assignment/docs/KNOWN_LIMITATIONS.md) and terminal.
 
 > **Spoken Audio**:  

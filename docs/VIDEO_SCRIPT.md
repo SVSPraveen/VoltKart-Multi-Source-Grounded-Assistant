@@ -1,29 +1,28 @@
-# Explainer Video Script & Timed Walkthrough
+# Explainer Video Script & Walkthrough Guide
 
-**Target Duration**: 12–14 Minutes (within the 10–15 minute limit)  
-**Presenter**: Engineering Candidate  
+**Presenter**: Praveen (Backend Systems & Production AI Architectures)  
 **Application**: VoltKart Multi-Source Grounded Assistant  
 
 > **Note on Demonstration Queries**: In accordance with the project specification, all interactive demonstration queries used in this walkthrough are **completely distinct from the 20 official evaluation questions** to prove generalizability.
 
 ---
 
-## Timed Video Structure Overview
+## Presentation Structure & Visual Plan
 
-| Section | Timestamp | Focus Topic |
+| Section | Topic | Visual Target |
 | :--- | :--- | :--- |
-| **Section 1** | 0:00 – 2:00 | **Problem Statement, Invariants & Architecture Philosophy** |
-| **Section 2** | 2:00 – 4:30 | **Zero-State App, Upload Flow & Ingestion Summary** |
-| **Section 3** | 4:30 – 7:30 | **Table Q&A, SQL Sandbox & Grounded Charts (Fresh Queries)** |
-| **Section 4** | 7:30 – 10:00 | **Document Q&A, Version Resolution & Fallback Disclosure** |
-| **Section 5** | 10:00 – 12:30 | **Mixed Reasoning, Server-Gated Web Search & PDF Export** |
-| **Section 6** | 12:30 – 14:30 | **Hardening, Real Failure Cases & Technical Defense** |
+| **Section 1** | **Problem Statement, Invariants & Architecture Philosophy** | Architecture Diagram (`docs/ARCHITECTURE.md`) / App Header |
+| **Section 2** | **Zero-State App, Upload Flow & Ingestion Summary** | Browser at empty app $\rightarrow$ File upload $\rightarrow$ Ingestion card |
+| **Section 3** | **Table Q&A, SQL Sandbox & Grounded Charts** | Relational queries $\rightarrow$ DuckDB SQL execution $\rightarrow$ Inline SVG chart |
+| **Section 4** | **Document Q&A, Version Resolution & Fallback Disclosure** | Dated policy query $\rightarrow$ Winner claim $\rightarrow$ Silent revision disclosure |
+| **Section 5** | **Mixed Reasoning, Server-Gated Web Search & PDF Export** | Web OFF (abstention) $\rightarrow$ Web ON (live comparison) $\rightarrow$ ReportLab PDF |
+| **Section 6** | **Hardening, Real Failure Cases & Technical Defense** | 7-layer verification $\rightarrow$ Known failure edge cases $\rightarrow$ Defense wrap-up |
 
 ---
 
-## Detailed Script & Teleprompter Outline
+## Detailed Script & Talking Points
 
-### Section 1: Problem Statement, Invariants & Architecture (0:00 – 2:00)
+### Section 1: Problem Statement, Invariants & Architecture Philosophy
 - **Visual**: Slide / Title screen showing system architecture diagram from `docs/ARCHITECTURE.md`.
 - **Spoken Audio**:
   > *"Hello! In this walkthrough, I am presenting the VoltKart Multi-Source Grounded Assistant. In enterprise analytics, standard LLM applications suffer from three critical flaws: they hallucinate mathematical calculations, they naively pick the newest document and miss older active clauses, and they cannot produce tamper-evident audit trails.*
@@ -39,8 +38,8 @@
 
 ---
 
-### Section 2: Zero-State App, File Upload & Ingestion (2:00 – 4:30)
-- **Visual**: Screen capture of browser running fresh app at `http://127.0.0.1:8000`. Show empty thread, sidebar, and "Upload Files" button.
+### Section 2: Zero-State App, File Upload & Ingestion Profiling
+- **Visual**: Screen capture of browser running fresh app at `http://localhost:5173/`. Show empty thread, sidebar, and "Upload Files" button.
 - **Spoken Audio**:
   > *"Here is the application running on a local development server. Notice the clean, instrument-panel interface built from our design token system—warm neutral paper backgrounds, sharp typography with tabular numerals, and no AI glitter.*
   >
@@ -50,16 +49,18 @@
   >
   > *Upon upload, our backend processes the files immediately:*
   > *1. Tables are profiled in DuckDB: column statistics, primary-foreign key relationships, and data documentation are indexed.*
-  > *2. Documents are parsed across PDF, DOCX, and TXT formats. Effective dates are extracted from filenames and headers, version families are grouped, and chunks are indexed into SQLite FTS5 alongside local BGE dense vector embeddings.*
+  > *2. Documents are parsed across PDF, DOCX, and TXT formats. Effective dates are extracted from filenames and headers, version families are grouped, and chunks are indexed into SQLite FTS5 alongside local dense vector embeddings.*
   >
   > *Let's click the 'Ingestion Card' button in the header. Here we see the full profile: 6 tables with inferred relationships, and our document families cleanly grouped with detected dates."*
 
 ---
 
-### Section 3: Table Q&A, SQL Sandbox & Grounded Charts (4:30 – 7:30)
+### Section 3: Table Q&A, SQL Sandbox & Grounded Charts
 - **Visual**: Show Composer. Type fresh analytical query.
 - **Demo Query 1 (Table)**:
-  > *"What is the average discount percentage given on Laptops across all delivered orders in 2025?"*
+  ```text
+  What is the average discount percentage given on Laptops across all delivered orders in 2025?
+  ```
 - **Spoken Audio**:
   > *"Let's ask our first analytical question. Notice this is not in the golden eval questions.*
   >
@@ -72,16 +73,20 @@
   >
   > *Now let's ask for an analytical chart:*
 - **Demo Query 2 (Chart)**:
-  > *"Show a bar chart of the top 3 product categories by total units sold in 2025."*
+  ```text
+  Show a bar chart of the top 3 product categories by total units sold in 2025.
+  ```
 - **Spoken Audio**:
   > *"Notice how the chart renders inline with tabular numerals. In accordance with Spec Bonus B10, the LLM emits only a chart specification—every value rendered in this SVG bar chart comes directly from stored SQL result rows. If a rogue agent attempts to alter a bar's height, our grounding validator rejects the spec."*
 
 ---
 
-### Section 4: Document Q&A & Deterministic Version Resolver (7:30 – 10:00)
-- **Visual**: Switch to a new chat conversation using `+ New`. Type policy question.
+### Section 4: Document Q&A & Deterministic Version Resolver
+- **Visual**: Switch to a new chat conversation using `+ New Chat`. Type policy question.
 - **Demo Query 3 (Version Fallback & Superseded Tracking)**:
-  > *"How are orders paid in cash refunded under the return policy?"*
+  ```text
+  How are orders paid in cash refunded under the return policy?
+  ```
 - **Spoken Audio**:
   > *"Now we arrive at the heart of the project: deterministic document version resolution across dated policies.*
   >
@@ -98,10 +103,12 @@
 
 ---
 
-### Section 5: Mixed Q&A, Web Search Gating & PDF Export (10:00 – 12:30)
+### Section 5: Mixed Q&A, Web Search Gating & PDF Export
 - **Visual**: Switch to Chat 3. Show Web Search toggle OFF, then toggle ON.
 - **Demo Query 4 (Web Search Gating)**:
-  > *"What is Flipkart's return window for consumer electronics?"*
+  ```text
+  What is Flipkart's return window for consumer electronics?
+  ```
 - **Spoken Audio**:
   > *"Now let's test our server-side web search tool gating (Bonus B8). The 'Web Search' checkbox is currently OFF.*
   >
@@ -123,7 +130,7 @@
 
 ---
 
-### Section 6: Hardening, Known Limitations & Defense (12:30 – 14:30)
+### Section 6: Hardening, Known Limitations & Technical Defense
 - **Visual**: Display terminal running `scripts/runner.py verify` and open `docs/KNOWN_LIMITATIONS.md`.
 - **Spoken Audio**:
   > *"To ensure enterprise robustness, our system passed all seven verification layers in our test harness:*

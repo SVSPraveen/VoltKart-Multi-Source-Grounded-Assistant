@@ -44,9 +44,9 @@
   - Assistant & API Integration (`backend/assistant.py`, `backend/api.py`): Contextual entity resolution across turns (Q2 resolving to Q1 store), SQLite message persistence, `/api/query`, and `/api/execute-sql` endpoints.
   - Live Golden Evaluations Q1-Q5: 3 live runs each, 15/15 PASS (100% pass rate) with exact paisa precision vs golden.yaml.
   - Adversarial Probes A6-A10: 5/5 PASS including DROP TABLE blocked (orders table intact with 900 rows), read_csv('/etc/passwd') blocked, 2027 revenue empty result, spend ambiguity disclosure, and Kavya disambiguation.
-  - Unit test suite expanded to 91 tests across `sql_guard`, `sql_sandbox`, `grounding`, `sql_agent`, and ingestion.
-  - Zero hardcoding gate: `make no-hardcode` passes cleanly with 0 sample entity strings in `backend/` or `frontend/src/`.
-  - Rules `R-036`, `R-037`, and `R-038` recorded in `REVIEW.md`.
+  - Unit test suite expanded to 100 tests across `sql_guard`, `sql_sandbox`, `grounding`, `sql_agent`, and ingestion (including join fan-out reconciliation, anonymous table reader blocking, and json LLM extraction).
+  - Zero hardcoding gate: `make no-hardcode` passes cleanly with 0 sample entity strings in `backend/` or `frontend/src/` (including strict customer regexes).
+  - Rules `R-036`, `R-037`, `R-038`, `R-039`, `R-040`, `R-041`, and `R-042` recorded in `REVIEW.md`.
 
 ### 2. In Progress
 - [ ] Phase 3 Gate Report submission and owner review.

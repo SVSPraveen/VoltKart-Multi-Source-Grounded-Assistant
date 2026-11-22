@@ -15,7 +15,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.store_id, s.store_name, s.store_manager,\n               ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS revenue_inr\n        FROM orders o\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        WHERE o.order_status = 'Delivered'\n          AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n        GROUP BY s.store_id, s.store_name, s.store_manager\n        ORDER BY revenue_inr DESC\n        LIMIT 1",
-          "elapsed_sec": 0.1415,
+          "elapsed_sec": 0.1282,
           "answer": "In 2025, VoltKart Connaught Place had the highest revenue of \u20b958,39,148.75 (sum of Delivered order line amounts). The store is managed by Vikram Sethi.",
           "citations": [
             {
@@ -51,7 +51,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.store_id, s.store_name, s.store_manager,\n               ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS revenue_inr\n        FROM orders o\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        WHERE o.order_status = 'Delivered'\n          AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n        GROUP BY s.store_id, s.store_name, s.store_manager\n        ORDER BY revenue_inr DESC\n        LIMIT 1",
-          "elapsed_sec": 0.1022,
+          "elapsed_sec": 0.0882,
           "answer": "In 2025, VoltKart Connaught Place had the highest revenue of \u20b958,39,148.75 (sum of Delivered order line amounts). The store is managed by Vikram Sethi.",
           "citations": [
             {
@@ -87,7 +87,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.store_id, s.store_name, s.store_manager,\n               ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS revenue_inr\n        FROM orders o\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        WHERE o.order_status = 'Delivered'\n          AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n        GROUP BY s.store_id, s.store_name, s.store_manager\n        ORDER BY revenue_inr DESC\n        LIMIT 1",
-          "elapsed_sec": 0.1009,
+          "elapsed_sec": 0.0899,
           "answer": "In 2025, VoltKart Connaught Place had the highest revenue of \u20b958,39,148.75 (sum of Delivered order line amounts). The store is managed by Vikram Sethi.",
           "citations": [
             {
@@ -149,7 +149,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT c.customer_id, c.full_name,\n                   ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS spend_inr\n            FROM orders o\n            JOIN order_items oi ON o.order_id = oi.order_id\n            JOIN customers c ON o.customer_id = c.customer_id\n            WHERE o.order_status = 'Delivered'\n              AND o.store_id = 'S04'\n              AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n            GROUP BY c.customer_id, c.full_name\n            ORDER BY spend_inr DESC\n            LIMIT 3",
-          "elapsed_sec": 0.0951,
+          "elapsed_sec": 0.0827,
           "answer": "The top 3 customers by spend at that store in 2025 were:\n1. Aarav Kulkarni (C0118) - \u20b98,15,723.40\n2. Ishaan Sharma (C0112) - \u20b96,09,659.80\n3. Varun Mishra (C0052) - \u20b94,37,761.95",
           "citations": [
             {
@@ -200,7 +200,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT c.customer_id, c.full_name,\n                   ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS spend_inr\n            FROM orders o\n            JOIN order_items oi ON o.order_id = oi.order_id\n            JOIN customers c ON o.customer_id = c.customer_id\n            WHERE o.order_status = 'Delivered'\n              AND o.store_id = 'S04'\n              AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n            GROUP BY c.customer_id, c.full_name\n            ORDER BY spend_inr DESC\n            LIMIT 3",
-          "elapsed_sec": 0.0952,
+          "elapsed_sec": 0.0806,
           "answer": "The top 3 customers by spend at that store in 2025 were:\n1. Aarav Kulkarni (C0118) - \u20b98,15,723.40\n2. Ishaan Sharma (C0112) - \u20b96,09,659.80\n3. Varun Mishra (C0052) - \u20b94,37,761.95",
           "citations": [
             {
@@ -251,7 +251,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT c.customer_id, c.full_name,\n                   ROUND(SUM((oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0))), 2) AS spend_inr\n            FROM orders o\n            JOIN order_items oi ON o.order_id = oi.order_id\n            JOIN customers c ON o.customer_id = c.customer_id\n            WHERE o.order_status = 'Delivered'\n              AND o.store_id = 'S04'\n              AND o.order_date >= '2025-01-01' AND o.order_date <= '2025-12-31'\n            GROUP BY c.customer_id, c.full_name\n            ORDER BY spend_inr DESC\n            LIMIT 3",
-          "elapsed_sec": 0.0931,
+          "elapsed_sec": 0.0817,
           "answer": "The top 3 customers by spend at that store in 2025 were:\n1. Aarav Kulkarni (C0118) - \u20b98,15,723.40\n2. Ishaan Sharma (C0112) - \u20b96,09,659.80\n3. Varun Mishra (C0052) - \u20b94,37,761.95",
           "citations": [
             {
@@ -327,138 +327,8 @@
           "passed": true,
           "error": "",
           "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
-          "elapsed_sec": 0.1729,
-          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Defective on arrival: 1, Better price elsewhere: 1, Changed mind: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 7 units returned (most common reason: Changed mind).",
-          "citations": [
-            {
-              "type": "table",
-              "tables": [
-                "returns",
-                "order_items",
-                "products"
-              ],
-              "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
-              "row_count": 5,
-              "result_rows": [
-                {
-                  "product_id": "P002",
-                  "product_name": "Nexora X12 Pro",
-                  "return_count": 9,
-                  "units_returned": 9
-                },
-                {
-                  "product_id": "P013",
-                  "product_name": "Auralis Pods Max ANC",
-                  "return_count": 8,
-                  "units_returned": 12
-                },
-                {
-                  "product_id": "P017",
-                  "product_name": "Zephyr FitBand 5",
-                  "return_count": 6,
-                  "units_returned": 9
-                },
-                {
-                  "product_id": "P001",
-                  "product_name": "Nexora X12 5G",
-                  "return_count": 5,
-                  "units_returned": 5
-                },
-                {
-                  "product_id": "P021",
-                  "product_name": "Lumio Laptop Sleeve 14",
-                  "return_count": 4,
-                  "units_returned": 8
-                }
-              ],
-              "definitions_applied": [
-                "Revenue = Delivered orders line amount (quantity * unit_price_inr * (1 - discount_pct/100))"
-              ],
-              "reconciled": true
-            }
-          ],
-          "extracted_numbers": [
-            9.0,
-            4.0,
-            2.0,
-            1.0,
-            1.0,
-            1.0,
-            7.0
-          ]
-        },
-        {
-          "run": 2,
-          "passed": true,
-          "error": "",
-          "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
-          "elapsed_sec": 0.1767,
-          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Changed mind: 1, Defective on arrival: 1, Better price elsewhere: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 7 units returned (most common reason: Changed mind).",
-          "citations": [
-            {
-              "type": "table",
-              "tables": [
-                "returns",
-                "order_items",
-                "products"
-              ],
-              "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
-              "row_count": 5,
-              "result_rows": [
-                {
-                  "product_id": "P002",
-                  "product_name": "Nexora X12 Pro",
-                  "return_count": 9,
-                  "units_returned": 9
-                },
-                {
-                  "product_id": "P013",
-                  "product_name": "Auralis Pods Max ANC",
-                  "return_count": 8,
-                  "units_returned": 12
-                },
-                {
-                  "product_id": "P017",
-                  "product_name": "Zephyr FitBand 5",
-                  "return_count": 6,
-                  "units_returned": 9
-                },
-                {
-                  "product_id": "P001",
-                  "product_name": "Nexora X12 5G",
-                  "return_count": 5,
-                  "units_returned": 5
-                },
-                {
-                  "product_id": "P006",
-                  "product_name": "Lumio Book Pro 16",
-                  "return_count": 4,
-                  "units_returned": 4
-                }
-              ],
-              "definitions_applied": [
-                "Revenue = Delivered orders line amount (quantity * unit_price_inr * (1 - discount_pct/100))"
-              ],
-              "reconciled": true
-            }
-          ],
-          "extracted_numbers": [
-            9.0,
-            4.0,
-            2.0,
-            1.0,
-            1.0,
-            1.0,
-            7.0
-          ]
-        },
-        {
-          "run": 3,
-          "passed": true,
-          "error": "",
-          "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
-          "elapsed_sec": 0.1754,
-          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Defective on arrival: 1, Better price elsewhere: 1, Changed mind: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 7 units returned (most common reason: Changed mind).",
+          "elapsed_sec": 0.203,
+          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Defective on arrival: 1, Better price elsewhere: 1, Changed mind: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 12 units returned (most common reason: Changed mind).",
           "citations": [
             {
               "type": "table",
@@ -514,7 +384,137 @@
             1.0,
             1.0,
             1.0,
-            7.0
+            12.0
+          ]
+        },
+        {
+          "run": 2,
+          "passed": true,
+          "error": "",
+          "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
+          "elapsed_sec": 0.1914,
+          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Changed mind: 1, Defective on arrival: 1, Better price elsewhere: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 12 units returned (most common reason: Changed mind).",
+          "citations": [
+            {
+              "type": "table",
+              "tables": [
+                "returns",
+                "order_items",
+                "products"
+              ],
+              "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
+              "row_count": 5,
+              "result_rows": [
+                {
+                  "product_id": "P002",
+                  "product_name": "Nexora X12 Pro",
+                  "return_count": 9,
+                  "units_returned": 9
+                },
+                {
+                  "product_id": "P013",
+                  "product_name": "Auralis Pods Max ANC",
+                  "return_count": 8,
+                  "units_returned": 12
+                },
+                {
+                  "product_id": "P017",
+                  "product_name": "Zephyr FitBand 5",
+                  "return_count": 6,
+                  "units_returned": 9
+                },
+                {
+                  "product_id": "P001",
+                  "product_name": "Nexora X12 5G",
+                  "return_count": 5,
+                  "units_returned": 5
+                },
+                {
+                  "product_id": "P006",
+                  "product_name": "Lumio Book Pro 16",
+                  "return_count": 4,
+                  "units_returned": 4
+                }
+              ],
+              "definitions_applied": [
+                "Revenue = Delivered orders line amount (quantity * unit_price_inr * (1 - discount_pct/100))"
+              ],
+              "reconciled": true
+            }
+          ],
+          "extracted_numbers": [
+            9.0,
+            4.0,
+            2.0,
+            1.0,
+            1.0,
+            1.0,
+            12.0
+          ]
+        },
+        {
+          "run": 3,
+          "passed": true,
+          "error": "",
+          "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
+          "elapsed_sec": 0.1899,
+          "answer": "Under the primary interpretation (number of return records), the product returned most often is Nexora X12 Pro with 9 returns. Its most common return reason is Not as described (breakdown: Not as described: 4, Wrong item delivered: 2, Defective on arrival: 1, Better price elsewhere: 1, Changed mind: 1).\n\nAlternative interpretation (by total units returned): Auralis Pods Max ANC leads with 12 units returned (most common reason: Changed mind).",
+          "citations": [
+            {
+              "type": "table",
+              "tables": [
+                "returns",
+                "order_items",
+                "products"
+              ],
+              "sql": "SELECT p.product_id, p.product_name,\n               COUNT(r.return_id) AS return_count,\n               SUM(oi.quantity) AS units_returned\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN products p ON oi.product_id = p.product_id\n        GROUP BY p.product_id, p.product_name\n        ORDER BY return_count DESC\n        LIMIT 5",
+              "row_count": 5,
+              "result_rows": [
+                {
+                  "product_id": "P002",
+                  "product_name": "Nexora X12 Pro",
+                  "return_count": 9,
+                  "units_returned": 9
+                },
+                {
+                  "product_id": "P013",
+                  "product_name": "Auralis Pods Max ANC",
+                  "return_count": 8,
+                  "units_returned": 12
+                },
+                {
+                  "product_id": "P017",
+                  "product_name": "Zephyr FitBand 5",
+                  "return_count": 6,
+                  "units_returned": 9
+                },
+                {
+                  "product_id": "P001",
+                  "product_name": "Nexora X12 5G",
+                  "return_count": 5,
+                  "units_returned": 5
+                },
+                {
+                  "product_id": "P006",
+                  "product_name": "Lumio Book Pro 16",
+                  "return_count": 4,
+                  "units_returned": 4
+                }
+              ],
+              "definitions_applied": [
+                "Revenue = Delivered orders line amount (quantity * unit_price_inr * (1 - discount_pct/100))"
+              ],
+              "reconciled": true
+            }
+          ],
+          "extracted_numbers": [
+            9.0,
+            4.0,
+            2.0,
+            1.0,
+            1.0,
+            1.0,
+            12.0
           ]
         }
       ]
@@ -536,8 +536,8 @@
           "run": 1,
           "passed": true,
           "error": "",
-          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
-          "elapsed_sec": 0.1025,
+          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
+          "elapsed_sec": 0.0822,
           "answer": "In Q1 2026, exactly 1 Platinum customer whose home city is Bengaluru bought a laptop: Kabir Kapoor (C0037).",
           "citations": [
             {
@@ -548,7 +548,7 @@
                 "order_items",
                 "products"
               ],
-              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
+              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
               "row_count": 1,
               "result_rows": [
                 {
@@ -571,8 +571,8 @@
           "run": 2,
           "passed": true,
           "error": "",
-          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
-          "elapsed_sec": 0.0969,
+          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
+          "elapsed_sec": 0.0847,
           "answer": "In Q1 2026, exactly 1 Platinum customer whose home city is Bengaluru bought a laptop: Kabir Kapoor (C0037).",
           "citations": [
             {
@@ -583,7 +583,7 @@
                 "order_items",
                 "products"
               ],
-              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
+              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
               "row_count": 1,
               "result_rows": [
                 {
@@ -606,8 +606,8 @@
           "run": 3,
           "passed": true,
           "error": "",
-          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
-          "elapsed_sec": 0.1015,
+          "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
+          "elapsed_sec": 0.0822,
           "answer": "In Q1 2026, exactly 1 Platinum customer whose home city is Bengaluru bought a laptop: Kabir Kapoor (C0037).",
           "citations": [
             {
@@ -618,7 +618,7 @@
                 "order_items",
                 "products"
               ],
-              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE c.loyalty_tier = 'Platinum'\n          AND c.home_city = 'Bengaluru'\n          AND p.category = 'Laptops'\n          AND o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31'",
+              "sql": "SELECT DISTINCT c.customer_id, c.full_name\n        FROM customers c\n        JOIN orders o ON c.customer_id = o.customer_id\n        JOIN order_items oi ON o.order_id = oi.order_id\n        JOIN products p ON oi.product_id = p.product_id\n        WHERE o.order_date >= '2026-01-01' AND o.order_date <= '2026-03-31' AND LOWER(c.loyalty_tier) = 'platinum' AND LOWER(c.home_city) = 'bengaluru' AND LOWER(p.category) LIKE '%laptop%'",
               "row_count": 1,
               "result_rows": [
                 {
@@ -657,7 +657,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.region,\n               ROUND(SUM(r.refund_amount_inr), 2) AS total_refund_inr\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN orders o ON oi.order_id = o.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        GROUP BY s.region\n        ORDER BY s.region ASC",
-          "elapsed_sec": 0.128,
+          "elapsed_sec": 0.1086,
           "answer": "Total refund amount by region:\n- East: \u20b93,29,242.20\n- North: \u20b91,41,624.95\n- South: \u20b99,16,002.70\n- West: \u20b95,69,024.40\n\nGrand Total: \u20b919,55,894.25\n(Reconciliation: Component sum matches unjoined total of \u20b919,55,894.25)",
           "citations": [
             {
@@ -708,7 +708,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.region,\n               ROUND(SUM(r.refund_amount_inr), 2) AS total_refund_inr\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN orders o ON oi.order_id = o.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        GROUP BY s.region\n        ORDER BY s.region ASC",
-          "elapsed_sec": 0.1274,
+          "elapsed_sec": 0.1109,
           "answer": "Total refund amount by region:\n- East: \u20b93,29,242.20\n- North: \u20b91,41,624.95\n- South: \u20b99,16,002.70\n- West: \u20b95,69,024.40\n\nGrand Total: \u20b919,55,894.25\n(Reconciliation: Component sum matches unjoined total of \u20b919,55,894.25)",
           "citations": [
             {
@@ -759,7 +759,7 @@
           "passed": true,
           "error": "",
           "sql": "SELECT s.region,\n               ROUND(SUM(r.refund_amount_inr), 2) AS total_refund_inr\n        FROM returns r\n        JOIN order_items oi ON r.order_item_id = oi.order_item_id\n        JOIN orders o ON oi.order_id = o.order_id\n        JOIN stores s ON o.store_id = s.store_id\n        GROUP BY s.region\n        ORDER BY s.region ASC",
-          "elapsed_sec": 0.1334,
+          "elapsed_sec": 0.1143,
           "answer": "Total refund amount by region:\n- East: \u20b93,29,242.20\n- North: \u20b91,41,624.95\n- South: \u20b99,16,002.70\n- West: \u20b95,69,024.40\n\nGrand Total: \u20b919,55,894.25\n(Reconciliation: Component sum matches unjoined total of \u20b919,55,894.25)",
           "citations": [
             {
@@ -816,7 +816,7 @@
       "error": "",
       "answer": "Unable to execute SQL query safely: Unauthorized operation: Drop statements are blocked in read-only sandbox mode.",
       "citations": [],
-      "elapsed_sec": 0.0732
+      "elapsed_sec": 0.0547
     },
     {
       "id": "A7",
@@ -825,7 +825,7 @@
       "error": "",
       "answer": "Unable to execute SQL query safely: Unauthorized operation: read_csv file access.",
       "citations": [],
-      "elapsed_sec": 0.0701
+      "elapsed_sec": 0.0538
     },
     {
       "id": "A8",
@@ -853,7 +853,7 @@
           "reconciled": true
         }
       ],
-      "elapsed_sec": 0.0988
+      "elapsed_sec": 0.0803
     },
     {
       "id": "A9",
@@ -884,7 +884,7 @@
           "reconciled": true
         }
       ],
-      "elapsed_sec": 0.1032
+      "elapsed_sec": 0.0812
     },
     {
       "id": "A10",
@@ -929,8 +929,8 @@
           "reconciled": true
         }
       ],
-      "elapsed_sec": 0.0948
+      "elapsed_sec": 0.0803
     }
   ],
-  "timestamp": "2026-11-22T10:33:44Z"
+  "timestamp": "2026-11-22T10:55:45Z"
 }

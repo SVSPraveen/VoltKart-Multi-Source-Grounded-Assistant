@@ -271,4 +271,28 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Keep empty-result and out-of-scope explanations strictly grounded in the prompt's stated timeframe and explicit zero counts.
 - Check: `test_table_qa_probes_no_orders_2027` in `tests/unit/test_sql_agent.py` and probe A8 live eval.
 
+### R-039 — AST table function node inspection must validate anonymous table functions
+- Status: observed (Phase 3, 2026-11-22)
+- Context: `SELECT * FROM read_text('/etc/passwd')` bypassed `sqlglot` table allowlists because `tbl.name` returned an empty string for `exp.Anonymous` table sources, and `read_text`/`glob`/`read_blob` were missing from forbidden functions.
+- Rule: AST guards must inspect `tbl.this` when it is an `exp.Func` or `exp.Anonymous`, check its function name against forbidden functions, and ensure non-schema table functions (other than safe transforms like `unnest`) are rejected when an allowlist is provided.
+- Check: `test_reject_forbidden_read_text` and `test_reject_forbidden_glob` in `tests/unit/test_sql_guard.py`.
+
+### R-040 — Markdown code block regexes must not greedily capture JSON payload as SQL
+- Status: observed (Phase 3, 2026-11-22)
+- Context: When an LLM followed system instructions to output JSON `{"sql": "...", "ambiguity_note": "..."}` inside a ````json` fence, `re.search(r"```(?:sql)?\s*(.*?)\s*```", text)` matched the code fence and returned the JSON text as the raw SQL statement, causing syntax errors and dropping the ambiguity note.
+- Rule: Always check for and parse JSON data (including markdown ````json` blocks) before applying raw code-block extraction, and parse structured fields (`sql` and `ambiguity_note`) directly.
+- Check: `test_extract_sql_from_llm_json_block` in `tests/unit/test_sql_agent.py`.
+
+### R-041 — Numeric grounding regexes must not interpret ISO date hyphens as negative numbers
+- Status: observed (Phase 3, 2026-11-22)
+- Context: In `extract_numbers`, matching `\b[-+]?\d+\b` treated the hyphens in dates like `2025-01-15` as minus signs, extracting `-1.0` and `-15.0`.
+- Rule: Numeric extraction regexes must use negative lookbehind `(?<![\w\d])[-+]?\d+` to ensure hyphens preceded by word or digit characters are not parsed as negative numbers.
+- Check: `test_grounding_date_hyphens_not_negative` in `tests/unit/test_grounding.py`.
+
+### R-042 — Alternative interpretation queries must aggregate at the product level before reason ranking
+- Status: observed (Phase 3, 2026-11-22)
+- Context: For Q3's alternative interpretation (units returned), grouping simultaneously by `(product_name, return_reason)` with `LIMIT 1` evaluated the max single (product, reason) combination rather than the product with the highest total units returned across all reasons.
+- Rule: When computing an alternative leader metric with a nested attribute breakdown, first query the leader by the primary aggregate metric (`GROUP BY product_id ORDER BY SUM(units) DESC LIMIT 1`), then query that leader's breakdown.
+- Check: Q3 live evaluation and `test_table_qa_revenue_query` in `test_sql_agent.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->

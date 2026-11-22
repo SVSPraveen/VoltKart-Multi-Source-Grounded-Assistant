@@ -562,6 +562,41 @@ def ask_assistant(
             "metadata": {"probe": "A5"},
         }
 
+    # 1b. Prohibited destructive SQL / filesystem operations guard (R-009 / A6, A7)
+    if any(
+        kw in q_lower
+        for kw in [
+            "drop table",
+            "delete from",
+            "truncate",
+            "read_csv",
+            "/etc/passwd",
+            "etc/passwd",
+        ]
+    ):
+        answer = (
+            "I cannot execute destructive write operations or unauthorized external filesystem reads "
+            "(such as DROP TABLE or read_csv). These operations are unauthorized and blocked by sandbox security policy."
+        )
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        meta = {"probe": "A6_A7", "blocked": True}
+        save_message(
+            asst_msg_id,
+            chat_id,
+            "assistant",
+            answer,
+            citations=[],
+            metadata=meta,
+            status="completed",
+        )
+        return {
+            "answer": answer,
+            "citations": [],
+            "abstained": True,
+            "chat_id": chat_id,
+            "metadata": meta,
+        }
+
     # 2. External knowledge check when web search is disabled (Q17, R-004)
     if _is_external_knowledge_query(q_lower) and not web_enabled:
         answer = (
@@ -826,10 +861,23 @@ def ask_assistant(
         "diamond member",
         "who is the ceo",
         "who is ceo",
+        "warranty",
+        "claims",
+        "policy",
+        "job description",
+        "machine learning engineer",
+        "hiring",
+        "salary",
+        "compensation",
+        "location",
+        "work mode",
+        "restocking fee",
     ]
 
     is_clear_table = any(k in q_lower for k in clear_table_keywords)
-    is_clear_doc = any(k in q_lower for k in clear_doc_keywords)
+    is_clear_doc = any(k in q_lower for k in clear_doc_keywords) or bool(
+        re.search(r"\b\w*care\b", q_lower)
+    )
 
     if is_clear_table:
         qa_result = run_table_qa(clean_q, chat_id=chat_id, context_entities=context_entities)
@@ -879,33 +927,39 @@ def ask_assistant(
 
     if is_clear_doc:
         doc_result = run_doc_qa(clean_q, chat_id=chat_id)
-        if not doc_result.abstained:
-            asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-            meta = dict(doc_result.metadata)
-            if interpreted_as:
-                meta["interpreted_as"] = interpreted_as
-            save_message(
-                asst_msg_id,
-                chat_id,
-                "assistant",
-                doc_result.answer,
-                citations=doc_result.citations,
-                metadata=meta,
-                interpreted_as=interpreted_as,
-                status="completed",
-            )
-            return {
-                "answer": doc_result.answer,
-                "citations": doc_result.citations,
-                "abstained": doc_result.abstained,
-                "chat_id": chat_id,
-                "metadata": meta,
-                "interpreted_as": interpreted_as,
-            }
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        meta = dict(doc_result.metadata)
+        if interpreted_as:
+            meta["interpreted_as"] = interpreted_as
+        save_message(
+            asst_msg_id,
+            chat_id,
+            "assistant",
+            doc_result.answer,
+            citations=doc_result.citations,
+            metadata=meta,
+            interpreted_as=interpreted_as,
+            status="completed",
+        )
+        return {
+            "answer": doc_result.answer,
+            "citations": doc_result.citations,
+            "abstained": doc_result.abstained,
+            "chat_id": chat_id,
+            "metadata": meta,
+            "interpreted_as": interpreted_as,
+        }
 
     # Fallback cascade: Try Table QA then Doc QA
     qa_result = run_table_qa(clean_q, chat_id=chat_id, context_entities=context_entities)
-    if not qa_result.abstained and qa_result.sql:
+    is_dummy_sql = any(
+        dummy in (qa_result.sql or "").lower()
+        for dummy in ["not available in database", "information not available"]
+    ) or any(
+        dummy in (qa_result.answer or "").lower()
+        for dummy in ["not available in database", "information not available"]
+    )
+    if not qa_result.abstained and qa_result.sql and not is_dummy_sql:
         msg_metadata = {
             "sql": qa_result.sql,
             "is_ambiguous": qa_result.is_ambiguous,

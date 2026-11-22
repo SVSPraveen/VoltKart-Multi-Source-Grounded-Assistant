@@ -39,7 +39,17 @@ def verify_verbatim_quote(evidence_quote: str | None, chunk_content: str | None)
     norm_content = normalize_text_for_quote_match(chunk_content)
     if not norm_quote:
         return False
-    return norm_quote in norm_content
+    if norm_quote in norm_content:
+        return True
+    # Support multi-line or bulleted quotes where each part is verified verbatim in the chunk
+    parts = [p.strip() for p in re.split(r"[\n\r]+|[;•]|\s*-\s+", evidence_quote) if p.strip()]
+    if len(parts) > 1:
+        norm_parts = [
+            normalize_text_for_quote_match(p) for p in parts if normalize_text_for_quote_match(p)
+        ]
+        if norm_parts and all(np in norm_content for np in norm_parts):
+            return True
+    return False
 
 
 class ExtractedClaim(BaseModel):

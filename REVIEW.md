@@ -489,4 +489,23 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: External gating checks must enforce regex word boundaries (e.g. `\bbest\s+buy\b`), and retailers with common English metric homonyms (such as "Target") must only match when retailer-qualifying tokens are present (`at Target`, `Target stores`, `Target policy`), never on business performance phrases (`target revenue`, `sales target`, `target margin`).
 - Check: Unit test `test_generalized_competitor_gating_when_web_off` in `tests/unit/test_web_search.py`.
 
+### R-075 — Flexible column alias resolution for analytical aggregations and customer spends
+- Status: observed (Judge Evaluation Fix Loop, 2026-11-23)
+- Context: In `backend/sql_agent.py`, `compose_grounded_answer` strictly looked for column names like `spend_inr` or `total_refund_inr`. When an online LLM aliased these as `revenue_inr` (for customer spend) or `total_refund_amount` (for regional refunds), the code extracted `0.0`, resulting in `₹0.00` outputs.
+- Rule: Grounded answer composers and reconciliation validators must support common aliases (`spend_inr`, `spend`, `total_spend`, `revenue_inr`, `total_revenue`, `total_refund_amount`, `refund_amount_inr`) and fallback to positional numeric columns when aliasing varies.
+- Check: Verified in Calibrated Judge Evaluation (`scripts/run_judge_eval.py`) across Q2 and Q5.
+
+### R-076 — Authoritative document query routing and multi-line verbatim quote verification
+- Status: observed (Judge Evaluation Fix Loop, 2026-11-23)
+- Context: In `backend/assistant.py`, when a document question resulted in an honest abstention (e.g., Diamond tier, out-of-coverage date), the dispatcher incorrectly fell through to Table QA, prompting the LLM to generate dummy SQL queries (`SELECT 'No information available' ...`) which returned `abstained = False`. Additionally, non-contiguous bullet quotes stitched with newlines failed strict single-string substring matching.
+- Rule: (1) Clear document inquiries (policies, roles, warranty/care, tiers) must be resolved authoritatively by Document QA; if Document QA honestly abstains, return the abstention directly rather than falling through to SQL tables. (2) Quote verifiers must support multi-part/bulleted extractions where each constituent line is verified verbatim against the document chunk.
+- Check: Verified in Calibrated Judge Evaluation (`scripts/run_judge_eval.py`) across Q10, Q12, A1, and A3.
+
+### R-077 — Destructive SQL and unauthorized filesystem access must be refused before LLM synthesis
+- Status: observed (Judge Evaluation Fix Loop, 2026-11-23)
+- Context: In `backend/assistant.py`, malicious probes containing `DROP TABLE orders` or `read_csv('/etc/passwd')` reached the LLM prompt, prompting the LLM to write polite apologetic SQL queries (`SELECT 'Access Denied'`) that executed with `abstained = False`.
+- Rule: Prohibited destructive operations (`DROP TABLE`, `DELETE FROM`, `TRUNCATE`) and unauthorized filesystem access (`read_csv`, `/etc/`) must be intercepted at the assistant gateway and immediately returned as an honest, explicit refusal with `abstained: True` and zero execution.
+- Check: Verified in Calibrated Judge Evaluation (`scripts/run_judge_eval.py`) across probes A6 and A7.
+
+
 

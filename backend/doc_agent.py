@@ -32,6 +32,7 @@ from backend.version_resolver import (
     ExtractedClaim,
     ResolvedFact,
     resolve_fact_across_versions,
+    verify_verbatim_quote,
 )
 
 
@@ -733,12 +734,18 @@ def run_doc_qa(
 
                 for ch in chunks_for_file:
                     claim = _extract_claim_with_llm(sub_q, ch)
-                    if claim is None:
-                        claim, tiers = _extract_claim_pattern(sub_q, ch)
+                    if (
+                        claim is None
+                        or not claim.states_fact
+                        or not verify_verbatim_quote(claim.evidence_quote, ch.get("content", ""))
+                    ):
+                        pat_claim, tiers = _extract_claim_pattern(sub_q, ch)
                         if tiers:
                             for t in tiers:
                                 if t not in known_available_tiers:
                                     known_available_tiers.append(t)
+                        if pat_claim and pat_claim.states_fact:
+                            claim = pat_claim
                     if claim and claim.states_fact:
                         candidate_claims.append(claim)
 
@@ -755,12 +762,18 @@ def run_doc_qa(
                 f_chunks = get_chunks_by_file_name(f_meta["file_name"])
                 for ch in f_chunks:
                     claim = _extract_claim_with_llm(sub_q, ch)
-                    if claim is None:
-                        claim, tiers = _extract_claim_pattern(sub_q, ch)
+                    if (
+                        claim is None
+                        or not claim.states_fact
+                        or not verify_verbatim_quote(claim.evidence_quote, ch.get("content", ""))
+                    ):
+                        pat_claim, tiers = _extract_claim_pattern(sub_q, ch)
                         if tiers:
                             for t in tiers:
                                 if t not in known_available_tiers:
                                     known_available_tiers.append(t)
+                        if pat_claim and pat_claim.states_fact:
+                            claim = pat_claim
                     if claim and claim.states_fact:
                         candidate_claims.append(claim)
             if candidate_claims:

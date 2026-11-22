@@ -141,37 +141,11 @@ def _build_revenue_expression(orders_alias: str = "o", items_alias: str = "oi") 
     return f"({items_alias}.quantity * {items_alias}.unit_price_inr * (1.0 - {items_alias}.discount_pct / 100.0))"
 
 
-def synthesize_sql_query(
+def _synthesize_planner_sql(
     question: str,
-    schema_card: SchemaCard,
     context_entities: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
-    """Generate SQL query and ambiguity notes using LLM or dynamic schema-driven planner."""
-    # 1. Attempt LLM generation if available
-    if is_llm_available():
-        system_prompt = (
-            "You are a principal SQL engineer for analytical databases. Given a database schema card "
-            "and business definitions, generate a single DuckDB SQL query to answer the user question.\n"
-            "Rules:\n"
-            "1. Strictly one SELECT-family query.\n"
-            "2. No DDL, DML, or external file/network functions.\n"
-            "3. Follow business definitions strictly: 'Revenue' is line amounts for Delivered orders only "
-            "(quantity * unit_price_inr * (1 - discount_pct/100)). Do NOT use list_price.\n"
-            '4. Output JSON: {"sql": "...", "ambiguity_note": "..."}'
-        )
-        prompt = (
-            f"Database Schema:\n{schema_card.markdown_summary}\n\n"
-            f"Context from previous turns: {context_entities or {}}\n\n"
-            f"User Question: {question}\n\n"
-            "Generate the SQL query to answer this question."
-        )
-        llm_response = generate_llm_response(prompt, system_prompt=system_prompt, temperature=0.0)
-        if llm_response:
-            sql, note = _extract_sql_from_llm_text(llm_response)
-            if sql:
-                return sql, note
-
-    # 2. Dynamic schema-driven planner
+    """Dynamic schema-driven planner for analytical SQL queries."""
     q_lower = question.lower()
 
     # Case A: DROP TABLE probe (A6)
@@ -384,6 +358,44 @@ def synthesize_sql_query(
     return "", "The question cannot be answered from the available database tables."
 
 
+def synthesize_sql_query(
+    question: str,
+    schema_card: SchemaCard,
+    context_entities: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    """Generate SQL query and ambiguity notes using LLM or dynamic schema-driven planner."""
+    # 1. Attempt LLM generation if available
+    if is_llm_available():
+        system_prompt = (
+            "You are a principal SQL engineer for analytical databases. Given a database schema card "
+            "and business definitions, generate a single DuckDB SQL query to answer the user question.\n"
+            "Rules:\n"
+            "1. Strictly one SELECT-family query.\n"
+            "2. No DDL, DML, or external file/network functions.\n"
+            "3. Follow business definitions strictly: 'Revenue' is line amounts for Delivered orders only "
+            "(quantity * unit_price_inr * (1 - discount_pct/100)). Do NOT use list_price.\n"
+            "4. DuckDB Date Filtering: 'order_date' is an ISO string (YYYY-MM-DD). Filter years using "
+            "order_date >= 'YYYY-01-01' AND order_date <= 'YYYY-12-31' or order_date LIKE 'YYYY%'. "
+            "Do NOT call strftime('%Y', order_date).\n"
+            "5. Column naming: Name revenue 'revenue_inr'. When querying customers, always select both 'customer_id' and 'full_name'.\n"
+            '6. Output JSON: {"sql": "...", "ambiguity_note": "..."}'
+        )
+        prompt = (
+            f"Database Schema:\n{schema_card.markdown_summary}\n\n"
+            f"Context from previous turns: {context_entities or {}}\n\n"
+            f"User Question: {question}\n\n"
+            "Generate the SQL query to answer this question."
+        )
+        llm_response = generate_llm_response(prompt, system_prompt=system_prompt, temperature=0.0)
+        if llm_response:
+            sql, note = _extract_sql_from_llm_text(llm_response)
+            if sql:
+                return sql, note
+
+    # 2. Dynamic schema-driven planner fallback
+    return _synthesize_planner_sql(question, context_entities)
+
+
 def run_table_qa(
     question: str,
     chat_id: str = "default",
@@ -417,18 +429,31 @@ def run_table_qa(
             break
         # Execution failure or validation error -> self-correction feedback
         last_error = query_result.error
-        if "syntax error" in str(last_error).lower() and is_llm_available():
+        if last_error and is_llm_available():
             feedback_prompt = (
-                f"The previously generated SQL failed with error:\n{last_error}\n\n"
+                f"The previously generated DuckDB SQL query failed with error:\n{last_error}\n\n"
                 f"Original SQL:\n{sql}\n\n"
                 f"Question:\n{question}\n\n"
-                "Please fix the SQL query to resolve this error."
+                "Please fix the DuckDB SQL query to resolve this error. Remember that order_date is a VARCHAR, so filter by date using order_date >= 'YYYY-01-01' AND order_date <= 'YYYY-12-31' or order_date LIKE 'YYYY%'."
             )
             corrected = generate_llm_response(feedback_prompt, temperature=0.0)
             if corrected:
-                sql, _ = _extract_sql_from_llm_text(corrected)
-                continue
+                new_sql, _ = _extract_sql_from_llm_text(corrected)
+                if new_sql and new_sql != sql:
+                    sql = new_sql
+                    continue
         break
+
+    if query_result is None or not query_result.success:
+        # Graceful fallback: try deterministic schema planner if LLM query failed execution
+        fallback_sql, fallback_note = _synthesize_planner_sql(question, context_entities)
+        if fallback_sql and fallback_sql != sql:
+            fb_res = execute_sandboxed_query(fallback_sql)
+            if fb_res.success:
+                sql = fallback_sql
+                ambiguity_note = fallback_note
+                query_result = fb_res
+                last_error = None
 
     if query_result is None or not query_result.success:
         err_msg = query_result.error if query_result else (last_error or "Unknown execution error")
@@ -445,7 +470,22 @@ def run_table_qa(
     unjoined_total: float | None = None
     extra_allowed: list[float] = []
     if "region" in query_result.columns and any("refund" in c for c in query_result.columns):
-        component_sum = sum(float(r.get("total_refund_inr", 0.0)) for r in query_result.rows)
+        component_sum = 0.0
+        for r in query_result.rows:
+            ref_val = None
+            for k in [
+                "total_refund_inr",
+                "total_refund_amount",
+                "refund_amount_inr",
+                "total_refund",
+                "refund",
+            ]:
+                if k in r and r[k] is not None:
+                    ref_val = float(r[k])
+                    break
+            if ref_val is None and len(r) > 1:
+                ref_val = float(list(r.values())[1])
+            component_sum += ref_val or 0.0
         extra_allowed.append(component_sum)
         reconciled, unjoined_total, _ = reconcile_component_sum(
             "returns", "refund_amount_inr", component_sum
@@ -604,10 +644,20 @@ def compose_grounded_answer(
             cid = r.get("customer_id", "")
             spend = r.get("spend_inr")
             if spend is None:
-                for k in ["spend", "total_spend", "total_spend_inr"]:
+                for k in [
+                    "spend",
+                    "total_spend",
+                    "total_spend_inr",
+                    "revenue_inr",
+                    "revenue",
+                    "total_revenue",
+                    "total_revenue_inr",
+                ]:
                     if k in r and r[k] is not None:
                         spend = r[k]
                         break
+            if spend is None and len(r) > 2:
+                spend = list(r.values())[2]
             spend = float(spend or 0.0)
             formatted_spend = format_inr(spend)
             lines.append(f"{idx}. {name} ({cid}) - {formatted_spend}")
@@ -620,7 +670,15 @@ def compose_grounded_answer(
         cid = top_cust.get("customer_id", "")
         spend = top_cust.get("spend_inr")
         if spend is None:
-            for k in ["spend", "total_spend", "total_spend_inr"]:
+            for k in [
+                "spend",
+                "total_spend",
+                "total_spend_inr",
+                "revenue_inr",
+                "revenue",
+                "total_revenue",
+                "total_revenue_inr",
+            ]:
                 if k in top_cust and top_cust[k] is not None:
                     spend = top_cust[k]
                     break
@@ -639,7 +697,27 @@ def compose_grounded_answer(
         top_prod = rows[0]
         pname = top_prod.get("product_name", "")
         pid = top_prod.get("product_id", "")
-        ret_count = top_prod.get("return_count", 0)
+        ret_count = top_prod.get("return_count")
+
+        # Resolve pid if missing from LLM query
+        if not pid and pname:
+            safe_pname = pname.replace("'", "''")
+            p_res = execute_sandboxed_query(
+                f"SELECT product_id FROM products WHERE product_name = '{safe_pname}' LIMIT 1;"
+            )
+            if p_res.success and p_res.rows:
+                pid = p_res.rows[0].get("product_id", "")
+
+        # Resolve ret_count if missing from LLM query
+        if (ret_count is None or ret_count == 0) and pid:
+            c_res = execute_sandboxed_query(
+                f"SELECT COUNT(*) AS count FROM returns r JOIN order_items oi ON r.order_item_id = oi.order_item_id WHERE oi.product_id = '{pid}';"
+            )
+            if c_res.success and c_res.rows:
+                ret_count = c_res.rows[0].get("count", 0)
+
+        ret_count = int(ret_count or 0)
+        helper_numbers.append(float(ret_count))
 
         # Run helper query for return reason breakdown on this product
         reason_res = execute_sandboxed_query(
@@ -719,7 +797,11 @@ def compose_grounded_answer(
         "bought" in q_lower or "purchased" in q_lower or "customer" in q_lower
     ):
         count = len(rows)
-        names = [f"{r['full_name']} ({r['customer_id']})" for r in rows]
+        names = [
+            f"{r.get('full_name', '')} ({r.get('customer_id', '')})".replace(" ()", "").strip()
+            for r in rows
+            if r.get("full_name") or r.get("customer_id")
+        ]
         name_str = ", ".join(names)
 
         q_match = re.search(r"\bQ[1-4]\s*20\d{2}\b", question, re.IGNORECASE)
@@ -752,7 +834,20 @@ def compose_grounded_answer(
         grand_total = 0.0
         for r in rows:
             region = r.get("region", "")
-            refund = float(r.get("total_refund_inr", 0.0))
+            refund = None
+            for k in [
+                "total_refund_inr",
+                "total_refund_amount",
+                "refund_amount_inr",
+                "total_refund",
+                "refund",
+            ]:
+                if k in r and r[k] is not None:
+                    refund = float(r[k])
+                    break
+            if refund is None and len(r) > 1:
+                refund = float(list(r.values())[1])
+            refund = float(refund or 0.0)
             grand_total += refund
             lines.append(f"- {region}: {format_inr(refund)}")
 

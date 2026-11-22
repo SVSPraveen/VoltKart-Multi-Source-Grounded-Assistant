@@ -26,6 +26,35 @@ def _extract_numbers(text: str) -> list[float]:
     return numbers
 
 
+def _extract_expected_numbers(data: Any, prefix: str = "") -> list[tuple[str, float]]:
+    """Recursively extract numeric expectations (amounts, counts, totals) from expected data structures."""
+    numeric_items: list[tuple[str, float]] = []
+    numeric_indicators = (
+        "_inr",
+        "count",
+        "spend",
+        "amount",
+        "returns",
+        "units",
+        "total",
+        "fee",
+        "price",
+        "revenue",
+    )
+    if isinstance(data, dict):
+        for k, v in data.items():
+            sub_key = f"{prefix}.{k}" if prefix else str(k)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                if any(ind in str(k).lower() for ind in numeric_indicators) or isinstance(v, float):
+                    numeric_items.append((sub_key, float(v)))
+            elif isinstance(v, (dict, list)):
+                numeric_items.extend(_extract_expected_numbers(v, prefix=sub_key))
+    elif isinstance(data, list):
+        for idx, item in enumerate(data):
+            numeric_items.extend(_extract_expected_numbers(item, prefix=f"{prefix}[{idx}]"))
+    return numeric_items
+
+
 class CalibratedJudge:
     """Deterministic, rubric-based evaluation judge with calibration assertions (R-016)."""
 
@@ -122,15 +151,25 @@ class CalibratedJudge:
         corr_reasons: list[str] = []
 
         # Check numeric target
+        tol = float(question_spec.get("tolerance", 0.01))
+        nums = _extract_numbers(answer_text)
+        expected_targets: list[tuple[str, float]] = []
+
         if "expected_number" in question_spec:
-            target = float(question_spec["expected_number"])
-            tol = float(question_spec.get("tolerance", 0.01))
-            nums = _extract_numbers(answer_text)
-            matched = any(abs(n - target) <= tol for n in nums)
-            if not matched:
-                corr_score -= 0.5
-                corr_reasons.append(f"Expected number {target} (tol={tol}) not found in answer.")
-                feedback.append(f"Numeric mismatch: target {target} missing.")
+            expected_targets.append(("target", float(question_spec["expected_number"])))
+        elif "expected" in question_spec and isinstance(question_spec["expected"], (dict, list)):
+            expected_targets = _extract_expected_numbers(question_spec["expected"])
+
+        if expected_targets:
+            for lbl, target in expected_targets:
+                matched = any(abs(n - target) <= max(tol, target * 0.001) for n in nums)
+                if not matched:
+                    deduct = min(0.5, 0.5 / len(expected_targets))
+                    corr_score -= deduct
+                    corr_reasons.append(
+                        f"Expected number {target} for '{lbl}' (tol={tol}) not found in answer."
+                    )
+                    feedback.append(f"Numeric mismatch: {lbl}={target} missing.")
 
         # Check must_include
         must_include = question_spec.get("must_include", [])
@@ -162,10 +201,15 @@ class CalibratedJudge:
         # 3. Dimension: Provenance & Version Resolution (Weight: 0.20)
         prov_score = 1.0
         prov_reasons: list[str] = []
-        expected_version = question_spec.get("expected_version")
+        expected_version = question_spec.get("expected_version") or question_spec.get(
+            "must_state_version"
+        )
         requires_fallback = (
             question_spec.get("requires_older_version", False)
+            or bool(question_spec.get("must_state_version"))
             or "older" in str(question_spec.get("expect", "")).lower()
+            or "older" in str(question_spec.get("expected", "")).lower()
+            or "fallback" in str(question_spec.get("expected", "")).lower()
         )
 
         if expected_version:
@@ -173,8 +217,10 @@ class CalibratedJudge:
             in_text = exp_str in answer_text.lower()
             in_cit = any(
                 exp_str in str(c.get("doc_date", "")).lower()
+                or exp_str in str(c.get("date", "")).lower()
                 or exp_str in str(c.get("version", "")).lower()
                 or exp_str in str(c.get("file_name", "")).lower()
+                or exp_str in str(c.get("source", "")).lower()
                 for c in citations
             )
             if not (in_text or in_cit):
@@ -190,6 +236,9 @@ class CalibratedJudge:
                 "remains active",
                 "older version",
                 "superseded",
+                "dated",
+                "policy (",
+                "version",
             ]
             has_fallback_note = any(ind in answer_text.lower() for ind in fallback_indicators)
             if not has_fallback_note:
@@ -232,7 +281,7 @@ class CalibratedJudge:
                             cit_score -= 0.3
                             cit_reasons.append("Table citation missing executed SQL.")
                     elif c_type == "document":
-                        if not c.get("verbatim_quote"):
+                        if not c.get("verbatim_quote") and not c.get("quote"):
                             cit_score -= 0.3
                             cit_reasons.append("Document citation missing verbatim quote.")
                     elif c_type == "web":

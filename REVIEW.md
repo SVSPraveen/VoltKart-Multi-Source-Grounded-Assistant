@@ -435,3 +435,21 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Evaluation judges must enforce non-negotiable pass gates across all critical dimensions (`correctness`, `provenance`, `citation_sufficiency`, `abstention_honesty`, and `grounding_faithfulness`) so no single catastrophic flaw can hide behind a high composite score.
 - Check: Calibration unit test `test_judge_calibration_flags_deliberate_errors` in `tests/judge/test_judge_calibration.py`.
 
+### R-066 — Evaluation judges must evaluate native ground truth structures (nested numbers and version assertions)
+- Status: observed (Phase 7 Review, 2026-11-22)
+- Context: `CalibratedJudge` only checked top-level fixture keys `expected_number` and `expected_version`, meaning when evaluating questions loaded directly from `golden.yaml` (which store numbers in `expected: {revenue_inr: ...}` and version constraints in `must_state_version`), both numeric and provenance checks were silently skipped, giving 1.0 pass scores to answers with completely fabricated revenue or wrong document versions.
+- Rule: Always inspect native ground truth structures (`must_state_version` and recursive numeric extraction over `expected` dicts) so evaluation judges enforce ground truth faithfully across both synthetic fixtures and real golden benchmarks.
+- Check: Calibration tests in `tests/judge/test_judge_calibration.py` with golden question format fixtures.
+
+### R-067 — Variant generators must mutate all file types and entity tables to prevent partial generalization leaks
+- Status: observed (Phase 7 Review, 2026-11-22)
+- Context: `tests/variants/make_variant.py` only modified `.txt` files and `stores.csv`, leaving internal text of `.docx` files containing unrenamed "VoltKart" and old dates, `products.csv` containing "VoltKart" as brand and product name, and leaving `different_formats` unimplemented.
+- Rule: Variant generators must inspect and transform all structured and unstructured files (including `.docx` paragraph/table runs, product catalogs, and order items) and strictly remove duplicate superseded formats when emitting alternative file format versions.
+- Check: Generalization assertions in `tests/variants/test_variant_generalization.py`.
+
+### R-068 — Multi-source comparative synthesis must dynamically inject retrieved document parameters rather than static delta templates
+- Status: observed (Phase 7 Review, 2026-11-22)
+- Context: In `backend/assistant.py`, comparative synthesis between external web facts and local store policies hardcoded a "7-day" return window template for the store, which produced contradictory output when evaluating stores or variants with 10-day or 14-day policies.
+- Rule: Comparative multi-source answers must extract policy parameters dynamically from the retrieved document result (`doc_res.answer`) and format comparison statements reflecting the actual retrieved values.
+- Check: Golden question Q18 and variant test suite `tests/variants/test_variant_generalization.py`.
+

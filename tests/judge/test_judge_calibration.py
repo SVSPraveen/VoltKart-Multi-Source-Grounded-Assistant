@@ -60,9 +60,9 @@ def test_judge_calibration_flags_deliberate_errors(calibration_data: dict):
     assert flagged_count >= 4, (
         f"Judge failed calibration: only {flagged_count}/{len(flawed_candidates)} flagged (required >= 4)."
     )
-    # Assert all 5 are caught
-    assert flagged_count == 5, (
-        f"Expected all 5 flawed candidates to be caught, but got {flagged_count}."
+    # Assert all flawed candidates are caught
+    assert flagged_count == len(flawed_candidates), (
+        f"Expected all {len(flawed_candidates)} flawed candidates to be caught, but got {flagged_count}."
     )
 
 

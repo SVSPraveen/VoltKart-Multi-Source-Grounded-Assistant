@@ -165,6 +165,8 @@ def run_verify(allow_red_golden: bool = False) -> int:
         ("no-hardcode", [py, str(root / "scripts" / "check_no_hardcode.py")]),
         ("unit", [py, "-m", "pytest", "tests/unit"]),
         ("golden", [py, "-m", "pytest", "tests/golden"]),
+        ("variants", [py, "-m", "pytest", "tests/variants"]),
+        ("judge", [py, "-m", "pytest", "tests/judge"]),
     ]
 
     results: list[StepResult] = []

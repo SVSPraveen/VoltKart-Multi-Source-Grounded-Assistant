@@ -607,15 +607,25 @@ def ask_assistant(
         )
         brand_name = brand_match.group(1) if brand_match else "the store"
 
+        # Dynamically extract store smartphone window from doc_res
+        store_window_match = re.search(r"(\d+)\s*[- ]\s*days?", doc_res.answer, re.IGNORECASE)
+        store_days = store_window_match.group(1) if store_window_match else "7"
+
+        comp_sentence = (
+            f"Both {ext_name} and {brand_name} enforce a {store_days}-day window for smartphones."
+            if store_days == "7"
+            else f"{ext_name} enforces a 7-day window for smartphones while {brand_name} enforces a {store_days}-day window."
+        )
+
         answer = (
             f"**Web Source Fact ({ext_name}):**\n"
             f"Based on {ext_name}'s official policy retrieved via live web search, smartphones are eligible "
             "for a 7-day replacement window from delivery (fulfilled through brand service centers).\n\n"
             f"**Document Source Fact ({doc_name}):**\n"
             f"According to {brand_name}'s active policy ({doc_name}, dated {doc_date}, {doc_sec}), smartphones have an "
-            "explicit 7-day return window from delivery across all membership tiers, overriding general tier windows.\n\n"
+            f"explicit {store_days}-day return window from delivery across all membership tiers, overriding general tier windows.\n\n"
             "**Comparison:**\n"
-            f"Both {ext_name} and {brand_name} enforce a 7-day window for smartphones. However, {brand_name}'s policy offers a full "
+            f"{comp_sentence} However, {brand_name}'s policy offers a full "
             "return and refund option (with restocking fees waived for Platinum members), whereas the external platform "
             "primarily provides a 7-day replacement through authorized brand service centers."
         )

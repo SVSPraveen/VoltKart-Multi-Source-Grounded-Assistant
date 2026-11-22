@@ -38,16 +38,18 @@
     - Added security test suite `tests/unit/test_security_audit.py` (7/7 PASS).
   - **V7 Calibrated Judge**:
     - Implemented `tests/judge/rubric.py` and `tests/judge/calibrated_judge.py` across 6 dimensions: correctness, provenance, citation sufficiency, abstention honesty, grounding faithfulness, formatting.
-    - Calibrated first (`tests/judge/test_judge_calibration.py`): Fed 5 deliberately flawed answers (wrong number, wrong version, missing citations, failed to abstain, fabricated delivery date) and proved the judge flags 5/5 (100%, exceeding >= 4 requirement). Proved 0 false rejections on genuine correct answers.
+    - Hardened evaluation logic (R-066) to inspect native ground truth structures (nested numbers in `expected` and version constraints in `must_state_version`).
+    - Calibrated (`tests/judge/test_judge_calibration.py`): Fed 7 deliberately flawed answers (wrong number, wrong version, missing citations, failed to abstain, fabricated delivery date, golden format revenue mismatch, golden format version mismatch) and proved the judge flags 7/7 (100%, exceeding >= 4 requirement). Proved 0 false rejections on genuine correct answers.
     - Evaluated golden outputs with `scripts/run_judge_eval.py`: 30/30 Passed (100.0%) across all 20 golden questions and 10 adversarial probes.
   - **V6 UI & Accessibility Audit**:
     - Injected axe-core into Playwright E2E suite (`tests/e2e/test_accessibility.py`).
     - Fixed color contrast on card surfaces by darkening `--text-dim` from `#9CA3AF` to `#525866` (yielding 6.24:1 contrast ratio, passing WCAG 2.1 AA and AAA).
     - Added explicit `aria-label` attributes across all interactive header, sidebar, and composer controls.
     - Verified keyboard Tab navigation, visible focus outlines, and responsive layouts across 360px, 768px, 1280px, 1920px (`reports/screens/`).
+    - Eliminated duplicate `live_server` fixture in `test_ui_screens.py`.
   - **Verification & Gates**:
-    - Added rules `R-062`, `R-063`, `R-064`, `R-065` to `REVIEW.md`.
-    - Full `python scripts/runner.py verify` passes clean.
+    - Added rules `R-062`, `R-063`, `R-064`, `R-065`, `R-066`, `R-067`, `R-068` to `REVIEW.md`.
+    - Integrated `variants` and `judge` verification targets into `scripts/runner.py verify` (7/7 checks passing).
 
 ### 2. In Progress
 - [ ] Phase 7 Gate Report submission and owner review.

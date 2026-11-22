@@ -74,6 +74,41 @@
       },
       "expected_judge_flag": true,
       "expected_failing_dimension": "grounding_faithfulness"
+    },
+    {
+      "id": "bad_6_golden_format_revenue_mismatch",
+      "question_spec": {
+        "id": 1,
+        "question": "Which store had the highest revenue in 2025, and who manages it?",
+        "expected": {
+          "revenue_inr": 5839148.75
+        },
+        "must_include": ["VoltKart Connaught Place", "Vikram Sethi"]
+      },
+      "candidate_response": {
+        "answer": "In 2025, VoltKart Connaught Place managed by Vikram Sethi made ₹9,999,999.00 in revenue.",
+        "citations": [{"type": "table", "tables": ["orders"], "sql": "SELECT 1"}]
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "correctness"
+    },
+    {
+      "id": "bad_7_golden_format_must_state_version_mismatch",
+      "question_spec": {
+        "id": 8,
+        "question": "How soon must a customer report a product damaged on delivery?",
+        "must_state_version": "2024-04-01",
+        "expected": {
+          "window": "48 hours"
+        },
+        "must_include": ["48 hours"]
+      },
+      "candidate_response": {
+        "answer": "Under the latest policy (VoltKart_Return_Policy_2025-09-01.txt, dated 2025-09-01): 48 hours.",
+        "citations": [{"type": "document", "file_name": "VoltKart_Return_Policy_2025-09-01.txt", "doc_date": "2025-09-01", "verbatim_quote": "48 hours"}]
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "provenance"
     }
   ],
   "correct_candidates": [

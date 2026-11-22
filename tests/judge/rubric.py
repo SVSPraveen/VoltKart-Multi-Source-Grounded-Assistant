@@ -48,4 +48,5 @@ class JudgeVerdict:
                 for name, dim in self.dimension_scores.items()
             },
             "feedback": self.feedback,
+            "raw_response": self.raw_response,
         }

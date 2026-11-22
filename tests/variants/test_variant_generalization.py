@@ -16,12 +16,25 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import pytest
 
 from backend.doc_agent import run_doc_qa
 from backend.ingestion import ingest_files
 from backend.sql_agent import run_table_qa
-from backend.storage import reset_storage
+from backend.storage import init_sqlite_db, reset_storage
+from tests.unit.test_sample_bundle_ingestion import (
+    test_full_sample_bundle_ingestion as _restore_sample_bundle,
+)
 from tests.variants.make_variant import PRESETS, generate_variant, resolve_default_source
+
+
+@pytest.fixture(autouse=True, scope="module")
+def restore_sample_bundle_after_variants():
+    """Ensure database is restored to standard sample bundle after variant tests."""
+    yield
+    reset_storage()
+    _restore_sample_bundle()
+    init_sqlite_db()
 
 
 def compute_expected_revenue_by_store(variant_dir: Path, year: int = 2025) -> dict[str, Any]:
@@ -144,6 +157,21 @@ def test_variant_1_apex_retail_generalization(tmp_path: Path):
         f"Expected spend {expected_cust['spend_inr']} not found in answer: {res_cust.answer}"
     )
 
+    # 5. Assert product catalog and docx generalization
+    df_prods = pd.read_csv(variant_dir / "tables" / "products.csv")
+    assert "VoltKart" not in df_prods["brand"].values
+    assert any("ApexRetail" in name for name in df_prods["product_name"].values)
+    assert all(pid.startswith("PRD_") for pid in df_prods["product_id"].values)
+    df_items = pd.read_csv(variant_dir / "tables" / "order_items.csv")
+    assert all(pid.startswith("PRD_") for pid in df_items["product_id"].values)
+
+    import docx
+
+    for doc_path in (variant_dir / "documents").glob("*.docx"):
+        doc_obj = docx.Document(doc_path)
+        doc_text = "\n".join(p.text for p in doc_obj.paragraphs)
+        assert "VoltKart" not in doc_text, f"Found VoltKart in {doc_path.name}"
+
 
 def test_variant_2_zenith_table_policy_generalization(tmp_path: Path):
     """V4 Test 2: ZenithCommerce variant with markdown table policy and multi-format versions.
@@ -152,11 +180,20 @@ def test_variant_2_zenith_table_policy_generalization(tmp_path: Path):
     1. Document QA successfully extracts return window for Gold members (30 days) from table.
     2. Document QA successfully extracts smartphone category exception (10 days) from table.
     3. Response cites the ZenithCommerce return policy document with verbatim table row text.
+    4. Return Policy version family contains distinct file formats (.pdf, .docx, .md).
     """
     src_dir = resolve_default_source()
     variant_dir = tmp_path / "variant_2_zenith_table"
     cfg = PRESETS["variant_2_zenith_table"]
     generate_variant(source_dir=src_dir, output_dir=variant_dir, **cfg)
+
+    # Assert multi-format version family: Return Policy contains .pdf, .docx, and .md
+    policy_files = list((variant_dir / "documents").glob("*Return_Policy*"))
+    policy_exts = {f.suffix.lower() for f in policy_files}
+    assert ".pdf" in policy_exts
+    assert ".docx" in policy_exts
+    assert ".md" in policy_exts
+    assert not (variant_dir / "documents" / "ZenithCommerce_Return_Policy_2025-09-01.txt").exists()
 
     # Ingest into isolated database
     _ingest_variant_bundle(variant_dir)

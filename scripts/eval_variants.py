@@ -258,6 +258,14 @@ def run_variant_evals() -> int:
     report_md.write_text("\n".join(lines), encoding="utf-8")
     print(f"\nVariant evaluation report saved to: {report_md}")
 
+    # Restore default sample bundle storage state
+    print("\nRestoring default sample bundle storage state...")
+    from tests.unit.test_sample_bundle_ingestion import test_full_sample_bundle_ingestion
+
+    reset_storage()
+    test_full_sample_bundle_ingestion()
+    init_sqlite_db()
+
     return 0 if all_passed else 1
 
 

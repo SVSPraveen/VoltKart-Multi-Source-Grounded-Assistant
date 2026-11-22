@@ -78,6 +78,30 @@ def test_reject_forbidden_read_csv():
     assert "read_csv" in result.error_message
 
 
+def test_reject_forbidden_read_text():
+    sql = "SELECT * FROM read_text('/etc/passwd');"
+    result = validate_sql(sql, allowed_tables=["orders"])
+    assert not result.is_valid
+    assert "read_text" in result.error_message.lower()
+
+
+def test_reject_forbidden_glob():
+    sql = "SELECT * FROM glob('/*');"
+    result = validate_sql(sql, allowed_tables=["orders"])
+    assert not result.is_valid
+    assert "glob" in result.error_message.lower()
+
+
+def test_reject_attach_statement():
+    sql = "ATTACH '/tmp/evil.duckdb' AS evil_db;"
+    result = validate_sql(sql, allowed_tables=["orders"])
+    assert not result.is_valid
+    assert (
+        "blocked in read-only sandbox mode" in result.error_message
+        or "attach" in result.error_message.lower()
+    )
+
+
 def test_reject_unknown_table():
     sql = "SELECT * FROM super_secret_credentials;"
     result = validate_sql(sql, allowed_tables=["orders", "customers"])

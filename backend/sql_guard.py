@@ -21,14 +21,23 @@ FORBIDDEN_FUNCTIONS: set[str] = {
     "readcsv",
     "read_parquet",
     "readparquet",
+    "parquet_scan",
+    "read_parquet_auto",
     "read_json",
     "read_json_auto",
     "readjson",
+    "read_ndjson",
+    "read_ndjson_auto",
+    "read_text",
+    "read_blob",
+    "glob",
     "scan_csv",
     "scancsv",
     "scan_parquet",
     "scanparquet",
     "copy",
+    "write_csv",
+    "checkpoint",
     "export_database",
     "import_database",
     "load",
@@ -36,8 +45,16 @@ FORBIDDEN_FUNCTIONS: set[str] = {
     "getenv",
     "current_setting",
     "duckdb_settings",
+    "duckdb_memory",
+    "duckdb_secrets",
+    "duckdb_variables",
+    "duckdb_tables",
+    "duckdb_views",
+    "query",
     "query_table",
     "sniff_csv",
+    "attach",
+    "detach",
 }
 
 # Forbidden AST expression classes
@@ -57,6 +74,8 @@ FORBIDDEN_EXPRESSIONS: tuple[type[exp.Expression], ...] = (
     exp.Copy,
     exp.ReadCSV,
     exp.ReadParquet,
+    exp.Attach,
+    exp.Detach,
 )
 
 
@@ -212,6 +231,27 @@ def validate_sql(
             cte_names.add(cte.alias.lower())
 
     for tbl in table_nodes:
+        # Check if table source is an anonymous or function expression (e.g. read_text, glob)
+        if isinstance(tbl.this, (exp.Func, exp.Anonymous)):
+            fname = (tbl.this.name or str(getattr(tbl.this, "this", ""))).lower()
+            if fname in FORBIDDEN_FUNCTIONS or fname.replace("_", "") in {
+                f.replace("_", "") for f in FORBIDDEN_FUNCTIONS
+            }:
+                return SQLValidationResult(
+                    is_valid=False,
+                    error_message=f"Unauthorized function call '{fname}': external access is blocked by sandbox policy.",
+                )
+            if (
+                normalized_allowed is not None
+                and fname not in normalized_allowed
+                and fname != "unnest"
+            ):
+                return SQLValidationResult(
+                    is_valid=False,
+                    error_message=f"Table function '{fname}' is not an authorized schema table.",
+                )
+            continue
+
         tname = tbl.name.strip('"').strip("'")
         if not tname:
             continue

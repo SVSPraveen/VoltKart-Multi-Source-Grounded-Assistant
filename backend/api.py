@@ -45,6 +45,7 @@ from backend.storage import (
     list_all_files,
     list_chats,
     reset_storage,
+    update_chat_title,
 )
 
 
@@ -75,6 +76,12 @@ class SQLExecuteRequest(BaseModel):
 
     sql: str
     row_cap: int = 100
+
+
+class ChatUpdateRequest(BaseModel):
+    """Payload to update chat session metadata."""
+
+    title: str
 
 
 app = FastAPI(
@@ -190,6 +197,17 @@ def delete_chat_endpoint(chat_id: str) -> dict[str, str]:
     if not success:
         raise HTTPException(status_code=404, detail="Chat not found")
     return {"status": "deleted", "chat_id": clean_id}
+
+
+@router.patch("/chats/{chat_id}", response_model=ChatSession)
+def update_chat_endpoint(chat_id: str, request: ChatUpdateRequest) -> dict[str, Any]:
+    """Update title of an existing chat session."""
+    clean_id = validate_chat_id(chat_id)
+    update_chat_title(clean_id, request.title)
+    info = get_chat(clean_id)
+    if not info:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return info
 
 
 @router.post("/chats/{chat_id}/messages")

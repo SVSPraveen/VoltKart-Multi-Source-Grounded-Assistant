@@ -246,3 +246,4 @@
 | **Bonus B9** | Multiple Chat Sessions | Full sidebar thread manager with thread creation, deletion, rename, and automated planted-marker cross-chat isolation verification. |
 | **Bonus B10** | Analytical Charts | Native SVG bar and line charts rendered from stored SQL rows, verified against hallucinated values, and re-rendered into export PDFs. |
 | **Engineering Rigor** | Standard functional implementation | **7-Layer Automated Verification Stack** (`scripts/runner.py verify`), Calibrated 6-Dimension Judge (100% score), and Synthetic Variant Generator testing generalization. |
+

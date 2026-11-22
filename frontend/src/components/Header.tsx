@@ -3,6 +3,7 @@ import React from 'react';
 interface HeaderProps {
   chatTitle: string;
   chatId: string;
+  onNewChat?: () => void;
   onExportPdf: () => void;
   onToggleDrawer: () => void;
   isDrawerOpen: boolean;
@@ -13,6 +14,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   chatTitle,
   chatId,
+  onNewChat,
   onExportPdf,
   onToggleDrawer,
   isDrawerOpen,
@@ -60,6 +62,29 @@ export const Header: React.FC<HeaderProps> = ({
 
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {onNewChat && (
+          <button
+            onClick={onNewChat}
+            title="Start a new conversation thread"
+            aria-label="New Chat"
+            style={{
+              padding: '6px 11px',
+              backgroundColor: 'var(--accent-volt)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>+ New Chat</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenSummary}
           title="Inspect Table Schemas and Document Families"

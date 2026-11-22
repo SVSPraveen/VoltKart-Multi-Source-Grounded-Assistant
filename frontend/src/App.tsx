@@ -88,6 +88,10 @@ export const App: React.FC = () => {
   };
 
   const handleNewChat = async () => {
+    // If the active chat already has 0 messages, keep focus on it
+    if (messages.length === 0 && activeChatId) {
+      return;
+    }
     try {
       const res = await fetch('/api/chats', {
         method: 'POST',
@@ -96,9 +100,11 @@ export const App: React.FC = () => {
       });
       if (res.ok) {
         const newChat: ChatSession = await res.json();
-        setChats((prev) => [newChat, ...prev]);
+        setChats((prev) => [newChat, ...prev.filter((c) => c.chat_id !== newChat.chat_id)]);
         setActiveChatId(newChat.chat_id);
         setMessages([]);
+        setActiveCitation(null);
+        setIsDrawerOpen(false);
       }
     } catch (err) {
       console.error('Failed to create new chat:', err);
@@ -113,6 +119,10 @@ export const App: React.FC = () => {
         setChats(remaining);
         if (activeChatId === chatId && remaining.length > 0) {
           setActiveChatId(remaining[0].chat_id);
+          setActiveCitation(null);
+          setIsDrawerOpen(false);
+        } else if (remaining.length === 0) {
+          handleNewChat();
         }
       }
     } catch (err) {
@@ -122,6 +132,17 @@ export const App: React.FC = () => {
 
   const handleSendMessage = async (content: string, webEnabled: boolean) => {
     if (!activeChatId) return;
+
+    // Optimistically update chat title in sidebar if it's currently generic
+    const firstLine = content.trim().split('\n')[0].trim();
+    const cleanTitle = firstLine.slice(0, 40) + (firstLine.length > 40 ? '...' : '');
+    setChats((prev) =>
+      prev.map((c) =>
+        c.chat_id === activeChatId && (c.title === 'New Conversation' || c.title === 'New Chat' || !c.title || c.title === c.chat_id)
+          ? { ...c, title: cleanTitle }
+          : c
+      )
+    );
 
     // Optimistically append user message
     const tempUserMsg: ChatMessage = {
@@ -213,6 +234,7 @@ export const App: React.FC = () => {
     } finally {
       setIsSending(false);
       setStreamingStatus(null);
+      fetchChats();
     }
   };
 
@@ -261,7 +283,11 @@ export const App: React.FC = () => {
         chats={chats}
         activeChatId={activeChatId}
         onSelectChat={(id) => {
-          setActiveChatId(id);
+          if (id !== activeChatId) {
+            setActiveChatId(id);
+            setActiveCitation(null);
+            setIsDrawerOpen(false);
+          }
           setIsMobileSidebarOpen(false);
         }}
         onNewChat={handleNewChat}
@@ -284,6 +310,7 @@ export const App: React.FC = () => {
         <Header
           chatTitle={currentChat?.title || 'Conversation'}
           chatId={activeChatId}
+          onNewChat={handleNewChat}
           onExportPdf={handleExportPdf}
           onToggleDrawer={() => setIsDrawerOpen((prev) => !prev)}
           isDrawerOpen={isDrawerOpen}

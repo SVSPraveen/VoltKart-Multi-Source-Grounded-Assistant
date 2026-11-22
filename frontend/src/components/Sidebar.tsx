@@ -124,21 +124,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   justifyContent: 'space-between',
                   padding: '8px 10px',
                   borderRadius: '4px',
-                  marginBottom: '2px',
+                  marginBottom: '3px',
                   cursor: 'pointer',
                   backgroundColor: isActive ? 'var(--bg-paper)' : 'transparent',
                   border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                  borderLeft: isActive ? '3px solid var(--accent-volt-dark)' : '3px solid transparent',
                   fontWeight: isActive ? 600 : 400,
+                  transition: 'background-color 0.1s ease',
                 }}
               >
-                <div style={{
-                  fontSize: '12.5px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  marginRight: '8px',
-                }}>
+                <div
+                  title={c.title || c.chat_id}
+                  style={{
+                    fontSize: '12.5px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                    marginRight: '8px',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                  }}
+                >
                   {c.title || c.chat_id}
                 </div>
                 {chats.length > 1 && (

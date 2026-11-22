@@ -251,7 +251,28 @@ def save_message(
                 now,
             ),
         )
-        conn.execute("UPDATE chats SET updated_at = ? WHERE chat_id = ?", (now, chat_id))
+        if role == "user":
+            conn.row_factory = sqlite3.Row
+            cur = conn.execute(
+                "SELECT title, (SELECT COUNT(*) FROM messages WHERE chat_id = ? AND role = 'user') as ucnt FROM chats WHERE chat_id = ?",
+                (chat_id, chat_id),
+            )
+            row = cur.fetchone()
+            if (
+                row
+                and row["ucnt"] <= 1
+                and (row["title"] in ("New Chat", "New Conversation", "") or not row["title"])
+            ):
+                first_line = content.strip().split("\n")[0].strip()
+                clean_title = first_line[:42] + ("..." if len(first_line) > 42 else "")
+                conn.execute(
+                    "UPDATE chats SET title = ?, updated_at = ? WHERE chat_id = ?",
+                    (clean_title, now, chat_id),
+                )
+            else:
+                conn.execute("UPDATE chats SET updated_at = ? WHERE chat_id = ?", (now, chat_id))
+        else:
+            conn.execute("UPDATE chats SET updated_at = ? WHERE chat_id = ?", (now, chat_id))
 
 
 def update_message(

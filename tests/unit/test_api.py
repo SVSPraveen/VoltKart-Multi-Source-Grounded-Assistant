@@ -56,3 +56,24 @@ def test_reset_endpoint():
     reset_resp = client.post("/api/reset")
     assert reset_resp.status_code == 200
     assert reset_resp.json() == {"status": "cleared"}
+
+
+def test_create_and_patch_chat_endpoint():
+    """Verify creating a new chat and updating its title via PATCH."""
+    create_resp = client.post("/api/chats", json={"title": "Initial Title"})
+    assert create_resp.status_code == 200
+    chat_data = create_resp.json()
+    chat_id = chat_data["chat_id"]
+    assert chat_data["title"] == "Initial Title"
+
+    patch_resp = client.patch(f"/api/chats/{chat_id}", json={"title": "Updated Title"})
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["title"] == "Updated Title"
+
+    # Verify updated in listing
+    list_resp = client.get("/api/chats")
+    assert list_resp.status_code == 200
+    chats = list_resp.json()
+    matching = [c for c in chats if c["chat_id"] == chat_id]
+    assert len(matching) == 1
+    assert matching[0]["title"] == "Updated Title"

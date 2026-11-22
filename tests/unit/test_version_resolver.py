@@ -28,6 +28,9 @@ def test_quote_verification_exact_and_paraphrase():
     assert verify_verbatim_quote("within 30 days from delivery", chunk) is True
     # Normalized whitespace/casing
     assert verify_verbatim_quote("WITHIN  30 DAYS  FROM DELIVERY", chunk) is True
+    # Enclosing quotes stripped
+    assert verify_verbatim_quote('"within 30 days from delivery"', chunk) is True
+    assert verify_verbatim_quote("'within 30 days from delivery'", chunk) is True
     # Paraphrased / invented text must be rejected
     assert verify_verbatim_quote("customers have thirty days to return", chunk) is False
     # Empty quote must be rejected
@@ -168,7 +171,40 @@ def test_resolver_tie_dates_conflict():
 
     resolved = resolve_fact_across_versions(claims, family_files)
     assert resolved.status == "tie_dates"
+    assert resolved.winner is None
     assert "Conflicting values found" in resolved.explanation
+
+
+def test_resolver_tie_dates_agree():
+    """Two documents on the same latest date with identical facts -> resolved as answered."""
+    family_files = [
+        {"file_name": "Branch_A_Policy.pdf", "doc_date": "2025-01-01"},
+        {"file_name": "Branch_B_Policy.pdf", "doc_date": "2025-01-01"},
+    ]
+
+    claims = [
+        ExtractedClaim(
+            file_name="Branch_A_Policy.pdf",
+            doc_date="2025-01-01",
+            states_fact=True,
+            value="5 business days",
+            evidence_quote="refunds take 5 business days",
+            chunk_content="All refunds take 5 business days.",
+        ),
+        ExtractedClaim(
+            file_name="Branch_B_Policy.pdf",
+            doc_date="2025-01-01",
+            states_fact=True,
+            value="5 business days",
+            evidence_quote="refunds take 5 business days",
+            chunk_content="All refunds take 5 business days.",
+        ),
+    ]
+
+    resolved = resolve_fact_across_versions(claims, family_files)
+    assert resolved.status == "answered"
+    assert resolved.winner is not None
+    assert resolved.winner.value == "5 business days"
 
 
 def test_resolver_undated_document_ranked_last():

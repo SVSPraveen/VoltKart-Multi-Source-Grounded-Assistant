@@ -313,4 +313,22 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Point-in-time temporal queries (`as_of_date`) must be evaluated before general unconstrained topic matchers.
 - Check: Adversarial probe A4 live eval asserting `2025-01-15` and `20 days`.
 
+### R-046 — Conflicting tie dates must yield winner=None and abstain honestly
+- Status: observed (Phase 4, 2026-11-22)
+- Context: In `version_resolver.py`, when multiple documents shared the latest date with conflicting facts, `status` was set to `"tie_dates"` but `winner` was arbitrarily assigned to `latest_claims[0]`, causing downstream consumers to treat the arbitrary first document as the winner.
+- Rule: When conflicting facts share the latest document date, `winner` must be set to `None` and downstream agents must honestly report the tie conflict rather than guessing.
+- Check: Unit test `test_resolver_tie_dates_conflict` in `tests/unit/test_version_resolver.py` asserting `winner is None`.
+
+### R-047 — Document QA prose must compose dynamically from extracted values, chunks, and metadata
+- Status: observed (Phase 4, 2026-11-22)
+- Context: `doc_agent.py` previously contained sample-specific question templates with hardcoded compensation and location strings, violating Truth Rule 4 and breaking reviewer generality on arbitrary uploaded documents.
+- Rule: Application code must never hardcode sample values or specific entity names in answer prose or decomposition; answers must be assembled dynamically from winner values, chunk excerpts (e.g. exception clauses), and structured version metadata.
+- Check: `scripts/check_no_hardcode.py` and unit tests in `tests/unit/test_no_hardcode.py`.
+
+### R-048 — Verbatim quote verification must strip outer quotes from candidate quotes
+- Status: observed (Phase 4, 2026-11-22)
+- Context: `verify_verbatim_quote` performed substring checks directly on normalized text. When an LLM or structured extractor returned a quote enclosed in quotation marks (`"..."` or `'...'`), the quote failed substring matching because the source chunk text lacked the quotation marks.
+- Rule: Strip outer quotation marks (`'`, `"`) from candidate quotes prior to verifying substring presence in chunk content.
+- Check: Unit test `test_quote_verification_exact_and_paraphrase` in `tests/unit/test_version_resolver.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->

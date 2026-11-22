@@ -35,7 +35,7 @@ def verify_verbatim_quote(evidence_quote: str | None, chunk_content: str | None)
     """Strictly verify that evidence_quote is a normalized substring of chunk_content (R-019)."""
     if not evidence_quote or not chunk_content:
         return False
-    norm_quote = normalize_text_for_quote_match(evidence_quote)
+    norm_quote = normalize_text_for_quote_match(evidence_quote).strip("'\"")
     norm_content = normalize_text_for_quote_match(chunk_content)
     if not norm_quote:
         return False
@@ -152,7 +152,7 @@ def resolve_fact_across_versions(
         if len(norm_values) > 1:
             return ResolvedFact(
                 fact_name=fact_name,
-                winner=latest_claims[0],
+                winner=None,
                 status="tie_dates",
                 fallback_used=False,
                 explanation=f"Conflicting values found in multiple documents dated {latest_date}.",

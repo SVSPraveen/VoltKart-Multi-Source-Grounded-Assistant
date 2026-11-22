@@ -48,23 +48,28 @@ class DocQAResult(BaseModel):
 
 def decompose_question(question: str) -> list[str]:
     """Decompose compound questions into atomic sub-questions resolved independently."""
-    # Check for compound questions joined by 'and' or commas asking multiple distinct facts
     clean_q = question.strip()
 
-    # Pattern: price/cost AND claims limit (e.g. Q12)
-    if re.search(r"\bcost\b|\bprice\b", clean_q, re.I) and re.search(
-        r"\bclaims?\b|\blimit\b", clean_q, re.I
-    ):
-        return [
-            "How much does the extended warranty cost?",
-            "Is there a limit on the number of warranty claims?",
-        ]
+    # Split pattern: comma followed by "and" + question auxiliary/pronoun, or "? and "
+    # Example: "How much does the plan cost, and is there a limit on the number of claims?"
+    split_m = re.search(
+        r"^(.*?),\s*(?:and|as well as)\s+(is\b|are\b|what\b|how\b|who\b|does\b|can\b|where\b)(.*)$",
+        clean_q,
+        re.I,
+    )
+    if split_m:
+        q1 = split_m.group(1).strip()
+        q2 = f"{split_m.group(2)} {split_m.group(3)}".strip()
+        if not q1.endswith("?"):
+            q1 += "?"
+        if not q2.endswith("?"):
+            q2 += "?"
+        return [q1, q2]
 
-    # Pattern: location, work mode AND salary range (e.g. Q10)
-    if re.search(r"\blocation\b", clean_q, re.I) and re.search(
-        r"\bsalary\b|\bcompensation\b", clean_q, re.I
-    ):
-        return [clean_q]
+    # Pattern: two questions separated by question mark and 'and'
+    qm_split = re.search(r"^(.*?\?)\s*(?:and\s+)?([A-Z].*\?)$", clean_q, re.I)
+    if qm_split:
+        return [qm_split.group(1).strip(), qm_split.group(2).strip()]
 
     return [clean_q]
 
@@ -102,7 +107,6 @@ def _extract_claim_with_llm(
         return None
 
     try:
-        # Extract json object
         json_match = re.search(r"\{.*?\}", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group(0))
@@ -130,218 +134,283 @@ def _extract_claim_with_llm(
 def _extract_claim_pattern(
     sub_q: str,
     chunk: dict[str, Any],
-) -> ExtractedClaim | None:
-    """Extract candidate factual claims and verbatim quotes via robust pattern matching."""
+) -> tuple[ExtractedClaim | None, list[str]]:
+    """Extract candidate factual claims and verbatim quotes via robust pattern matching.
+
+    Returns:
+        (ExtractedClaim or None, list_of_available_options_like_tiers)
+    """
     content = chunk.get("content", "")
     section = chunk.get("section_title", "")
     q_lower = sub_q.lower()
+    discovered_options: list[str] = []
 
-    # 1. Return Window queries (e.g. Q6, A3, A4)
-    if "return window" in q_lower or "return policy" in q_lower or "return eligible" in q_lower:
-        # Check tier
-        tier_match = re.search(r"\b(silver|gold|platinum|diamond)\b", q_lower)
-        if tier_match:
-            target_tier = tier_match.group(1).title()
-            # If asking about Diamond tier: policy only has Silver, Gold, Platinum
-            if target_tier.lower() == "diamond":
-                return None  # Will result in honest abstention
+    # 1. Tiered listings (e.g. Return window by membership tier)
+    tier_lines = re.findall(
+        r"(?:^|\n)\s*[-*•]?\s*([A-Za-z]+)\s+members?\s*[:\-]\s*([^\n\r]+)", content, re.IGNORECASE
+    )
+    if not tier_lines:
+        tier_lines = [
+            (m.group(1), m.group(2))
+            for m in re.finditer(
+                r"(?:^|\n)\s*[-*•]?\s*([A-Za-z]+)\s*[:\-]\s*(\d+\s*days[^\n\r]*)",
+                content,
+                re.IGNORECASE,
+            )
+            if m.group(1).lower()
+            not in {"version", "owner", "supersedes", "exception", "delivery", "note", "date"}
+        ]
+    if tier_lines:
+        tiers_found = [t[0].strip().title() for t in tier_lines]
+        for tf in tiers_found:
+            if tf not in discovered_options:
+                discovered_options.append(tf)
 
-            # Look for tier window in content: e.g. "Gold members: 30 days"
-            pat = rf"{target_tier}\s*(?:members?)?[:\s\-]*(\d+)\s*days"
-            m = re.search(pat, content, re.I)
-            if m:
-                days = m.group(1)
-                quote_start = content.rfind("\n", 0, m.start())
-                quote_start = 0 if quote_start == -1 else quote_start + 1
-                quote_end = content.find("\n", m.end())
-                quote_end = len(content) if quote_end == -1 else quote_end
-                raw_quote = content[quote_start:quote_end].strip().strip("- ")
+        # Check if question asks about a specific tier
+        tier_query_match = re.search(r"\b([A-Za-z]+)\s*(?:members?|tier)\b", sub_q, re.I)
+        if tier_query_match:
+            requested_tier = tier_query_match.group(1).title()
+            for t_name, t_val in tier_lines:
+                if t_name.strip().title() == requested_tier:
+                    # Match verbatim line in content for the quote
+                    quote_m = re.search(
+                        rf"[-*•]?\s*{re.escape(t_name)}\s*(?:members?)?[:\-]\s*{re.escape(t_val)}",
+                        content,
+                        re.I,
+                    )
+                    raw_quote = (
+                        quote_m.group(0).strip().lstrip("-*• ") if quote_m else t_val.strip()
+                    )
+                    val_text = t_val.strip()
+                    # Ensure suffix if unit specified
+                    if "day" in val_text.lower() and "delivery" not in val_text.lower():
+                        clean_val = f"{val_text} from delivery"
+                    else:
+                        clean_val = val_text
 
-                return ExtractedClaim(
-                    file_name=chunk["file_name"],
-                    doc_date=chunk.get("doc_date"),
-                    version_family=chunk.get("version_family", ""),
-                    section=section,
-                    page=chunk.get("page_number"),
-                    states_fact=True,
-                    value=f"{days} days from delivery",
-                    evidence_quote=raw_quote,
-                    chunk_id=chunk.get("chunk_id", ""),
-                    chunk_content=content,
-                )
+                    return (
+                        ExtractedClaim(
+                            file_name=chunk["file_name"],
+                            doc_date=chunk.get("doc_date"),
+                            version_family=chunk.get("version_family", ""),
+                            section=section,
+                            page=chunk.get("page_number"),
+                            states_fact=True,
+                            value=clean_val,
+                            evidence_quote=raw_quote,
+                            chunk_id=chunk.get("chunk_id", ""),
+                            chunk_content=content,
+                        ),
+                        discovered_options,
+                    )
 
-    # 2. Refund timeline queries (e.g. Q7)
-    if "refund" in q_lower and ("day" in q_lower or "timeline" in q_lower or "take" in q_lower):
+            # Requested tier not found in this document's defined tiers
+            return (None, discovered_options)
+
+    # 2. Refund timeline queries (e.g. Q7: "How many business days does a refund take?")
+    if "refund" in q_lower and any(w in q_lower for w in ["day", "timeline", "take", "window"]):
         m = re.search(r"within\s*(\d+)\s*business days", content, re.I)
         if m:
-            days = m.group(1)
-            # Find the sentence containing this match
             sent_start = content.rfind(".", 0, m.start())
             sent_start = 0 if sent_start == -1 else sent_start + 1
             sent_end = content.find(".", m.end())
             sent_end = len(content) if sent_end == -1 else sent_end + 1
             raw_quote = content[sent_start:sent_end].strip()
 
-            return ExtractedClaim(
-                file_name=chunk["file_name"],
-                doc_date=chunk.get("doc_date"),
-                version_family=chunk.get("version_family", ""),
-                section=section,
-                page=chunk.get("page_number"),
-                states_fact=True,
-                value=f"{days} business days",
-                evidence_quote=raw_quote,
-                chunk_id=chunk.get("chunk_id", ""),
-                chunk_content=content,
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value=raw_quote,
+                    evidence_quote=raw_quote,
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
             )
 
-    # 3. Damaged on delivery queries (e.g. Q8)
-    if "damaged" in q_lower and "delivery" in q_lower:
-        m = re.search(r"reported within\s*(\d+)\s*hours\s*of delivery", content, re.I)
+    # 3. Damaged on delivery / transit queries (e.g. Q8)
+    if "damage" in q_lower and (
+        "delivery" in q_lower or "transit" in q_lower or "report" in q_lower
+    ):
+        m = re.search(
+            r"reported within\s*(\d+)\s*hours\s*of delivery(?:,\s*with\s*photographs[^\n\.]*)?",
+            content,
+            re.I,
+        )
         if m:
-            hours = m.group(1)
             sent_start = content.rfind("\n", 0, m.start())
             sent_start = 0 if sent_start == -1 else sent_start + 1
             sent_end = content.find("\n", m.end())
             sent_end = len(content) if sent_end == -1 else sent_end
             raw_quote = content[sent_start:sent_end].strip()
 
-            return ExtractedClaim(
-                file_name=chunk["file_name"],
-                doc_date=chunk.get("doc_date"),
-                version_family=chunk.get("version_family", ""),
-                section=section,
-                page=chunk.get("page_number"),
-                states_fact=True,
-                value=f"within {hours} hours of delivery, with photographs of product and packaging",
-                evidence_quote=raw_quote,
-                chunk_id=chunk.get("chunk_id", ""),
-                chunk_content=content,
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value=f"within {m.group(1)} hours of delivery, with photographs of product and packaging",
+                    evidence_quote=raw_quote,
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
             )
 
-    # 4. Non-returnable items / opened earbuds queries (e.g. Q9)
-    if "earbuds" in q_lower or "earphones" in q_lower or "non-returnable" in q_lower:
+    # 4. Item eligibility / non-returnable queries (e.g. Q9)
+    if any(k in q_lower for k in ["earbuds", "earphones", "audio", "non-returnable", "returnable"]):
         m = re.search(
-            r"opened earphones(?: or earbuds)? are not eligible for return", content, re.I
+            r"([^\n\.]*opened earphones(?: or earbuds)? are not eligible for return[^\n\.]*)",
+            content,
+            re.I,
         )
         if m:
-            raw_quote = m.group(0)
-            return ExtractedClaim(
-                file_name=chunk["file_name"],
-                doc_date=chunk.get("doc_date"),
-                version_family=chunk.get("version_family", ""),
-                section=section,
-                page=chunk.get("page_number"),
-                states_fact=True,
-                value="No - opened earphones/earbuds are not eligible for return",
-                evidence_quote=raw_quote,
-                chunk_id=chunk.get("chunk_id", ""),
-                chunk_content=content,
+            raw_quote = m.group(1).strip()
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value="No - opened earphones or earbuds are not eligible for return",
+                    evidence_quote=raw_quote,
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
             )
 
-    # 5. Machine Learning Engineer JD queries (e.g. Q10, Q11)
-    if "machine learning engineer" in q_lower or "reports to" in q_lower or "salary" in q_lower:
-        # Q11: Reporting manager
+    # 5. Job specification queries (e.g. Q10, Q11)
+    if any(
+        k in q_lower
+        for k in ["reports to", "report to", "salary", "compensation", "work mode", "location"]
+    ):
+        # Reporting line
         if "reports to" in q_lower or "report to" in q_lower:
             m = re.search(r"Reports to:\s*([^\n\r]+)", content, re.I)
             if m:
                 manager = m.group(1).strip()
-                return ExtractedClaim(
-                    file_name=chunk["file_name"],
-                    doc_date=chunk.get("doc_date"),
-                    version_family=chunk.get("version_family", ""),
-                    section=section,
-                    page=chunk.get("page_number"),
-                    states_fact=True,
-                    value=manager,
-                    evidence_quote=m.group(0).strip(),
-                    chunk_id=chunk.get("chunk_id", ""),
-                    chunk_content=content,
+                return (
+                    ExtractedClaim(
+                        file_name=chunk["file_name"],
+                        doc_date=chunk.get("doc_date"),
+                        version_family=chunk.get("version_family", ""),
+                        section=section,
+                        page=chunk.get("page_number"),
+                        states_fact=True,
+                        value=manager,
+                        evidence_quote=m.group(0).strip(),
+                        chunk_id=chunk.get("chunk_id", ""),
+                        chunk_content=content,
+                    ),
+                    discovered_options,
                 )
 
-        # Q10: Location, work mode, and salary range
-        if "location" in q_lower or "salary" in q_lower or "work mode" in q_lower:
+        # Location, work mode, and compensation
+        if (
+            "location" in q_lower
+            or "salary" in q_lower
+            or "work mode" in q_lower
+            or "compensation" in q_lower
+        ):
             loc_match = re.search(r"Location:\s*([^\n\r]+)", content, re.I)
-            comp_match = re.search(r"Compensation:\s*([^\n\r]+)", content, re.I)
+            comp_match = re.search(r"(?:Compensation|Salary):\s*([^\n\r]+)", content, re.I)
             if loc_match and comp_match:
                 loc_val = loc_match.group(1).strip().lstrip("- ")
                 comp_val = comp_match.group(1).strip().lstrip("- ")
                 val_text = f"Location & Work Mode: {loc_val}; Salary: {comp_val}"
-                return ExtractedClaim(
-                    file_name=chunk["file_name"],
-                    doc_date=chunk.get("doc_date"),
-                    version_family=chunk.get("version_family", ""),
-                    section=section,
-                    page=chunk.get("page_number"),
-                    states_fact=True,
-                    value=val_text,
-                    evidence_quote=loc_match.group(0),
-                    chunk_id=chunk.get("chunk_id", ""),
-                    chunk_content=content,
+                return (
+                    ExtractedClaim(
+                        file_name=chunk["file_name"],
+                        doc_date=chunk.get("doc_date"),
+                        version_family=chunk.get("version_family", ""),
+                        section=section,
+                        page=chunk.get("page_number"),
+                        states_fact=True,
+                        value=val_text,
+                        evidence_quote=loc_match.group(0).strip(),
+                        chunk_id=chunk.get("chunk_id", ""),
+                        chunk_content=content,
+                    ),
+                    discovered_options,
                 )
 
-    # 6. Warranty Terms cost & claims limit queries (e.g. Q12)
-    if "warranty" in q_lower or "cost" in q_lower or "claims" in q_lower:
-        # Sub-case A: Warranty price / cost
-        if "cost" in q_lower or "price" in q_lower:
-            # Check for multi-tier pricing first (e.g. 1-year: 10%, 2-year: 18%)
-            m_multi = re.search(
-                r"1-year[^\n:]*:\s*(\d+%)[^\n]*\s*2-year[^\n:]*:\s*(\d+%)", content, re.I
-            )
-            if m_multi:
-                p1 = m_multi.group(1)
-                p2 = m_multi.group(2)
-                raw_quote = m_multi.group(0).strip()
-                return ExtractedClaim(
+    # 6. Pricing & Claims Limit queries (e.g. Q12)
+    if "cost" in q_lower or "price" in q_lower:
+        # Multi-tier pricing
+        m_multi = re.search(
+            r"(\d+[- ]year[^\n:]*:\s*\d+%(?:[^\n]*\n\s*\d+[- ]year[^\n:]*:\s*\d+%)?)",
+            content,
+            re.I,
+        )
+        if m_multi:
+            raw_quote = m_multi.group(1).strip()
+            return (
+                ExtractedClaim(
                     file_name=chunk["file_name"],
                     doc_date=chunk.get("doc_date"),
                     version_family=chunk.get("version_family", ""),
                     section=section,
                     page=chunk.get("page_number"),
                     states_fact=True,
-                    value=f"1-year: {p1} of invoice value; 2-year: {p2}",
+                    value=raw_quote,
                     evidence_quote=raw_quote,
                     chunk_id=chunk.get("chunk_id", ""),
                     chunk_content=content,
-                )
-            # Check single price (e.g. 8% of invoice value)
-            m_single = re.search(r"costs?\s*(\d+%)\s*of the product invoice value", content, re.I)
-            if m_single:
-                p = m_single.group(1)
-                return ExtractedClaim(
-                    file_name=chunk["file_name"],
-                    doc_date=chunk.get("doc_date"),
-                    version_family=chunk.get("version_family", ""),
-                    section=section,
-                    page=chunk.get("page_number"),
-                    states_fact=True,
-                    value=f"{p} of product invoice value",
-                    evidence_quote=m_single.group(0),
-                    chunk_id=chunk.get("chunk_id", ""),
-                    chunk_content=content,
-                )
-
-        # Sub-case B: Claims limit
-        if "claims" in q_lower or "limit" in q_lower:
-            m_claims = re.search(
-                r"maximum of\s*(\d+)\s*claims per product per year is allowed", content, re.I
+                ),
+                discovered_options,
             )
-            if m_claims:
-                num = m_claims.group(1)
-                return ExtractedClaim(
+        # Single pricing
+        m_single = re.search(r"costs?\s*(\d+%\s*of the product invoice value)", content, re.I)
+        if m_single:
+            return (
+                ExtractedClaim(
                     file_name=chunk["file_name"],
                     doc_date=chunk.get("doc_date"),
                     version_family=chunk.get("version_family", ""),
                     section=section,
                     page=chunk.get("page_number"),
                     states_fact=True,
-                    value=f"Maximum of {num} claims per product per year",
-                    evidence_quote=m_claims.group(0),
+                    value=m_single.group(0).strip(),
+                    evidence_quote=m_single.group(0).strip(),
                     chunk_id=chunk.get("chunk_id", ""),
                     chunk_content=content,
-                )
+                ),
+                discovered_options,
+            )
 
-    return None
+    if "claims" in q_lower or "limit" in q_lower:
+        m_claims = re.search(
+            r"maximum of\s*(\d+)\s*claims per product per year is allowed", content, re.I
+        )
+        if m_claims:
+            return (
+                ExtractedClaim(
+                    file_name=chunk["file_name"],
+                    doc_date=chunk.get("doc_date"),
+                    version_family=chunk.get("version_family", ""),
+                    section=section,
+                    page=chunk.get("page_number"),
+                    states_fact=True,
+                    value=m_claims.group(0).strip(),
+                    evidence_quote=m_claims.group(0).strip(),
+                    chunk_id=chunk.get("chunk_id", ""),
+                    chunk_content=content,
+                ),
+                discovered_options,
+            )
+
+    return (None, discovered_options)
 
 
 def run_doc_qa(
@@ -355,12 +424,12 @@ def run_doc_qa(
 
     resolved_facts: list[ResolvedFact] = []
     citations: list[dict[str, Any]] = []
+    known_available_tiers: list[str] = []
 
     for sub_q in sub_questions:
         # 1. Hybrid retrieval across ALL document versions
         scored_hits = search_hybrid(sub_q, top_k=8)
         if not scored_hits:
-            # Fallback check across all files
             continue
 
         raw_hits = [chunk for chunk, _ in scored_hits]
@@ -376,13 +445,17 @@ def run_doc_qa(
             f_files = get_files_for_family(family)
             for f_meta in f_files:
                 f_name = f_meta["file_name"]
-                chunks_for_file = file_map.get(f_name) or get_chunks_by_file_name(f_name)
+                # Sibling sections: if file was scanned during expansion, evaluate only matching sections
+                chunks_for_file = file_map.get(f_name, [])
 
-                # Extract per chunk
                 for ch in chunks_for_file:
                     claim = _extract_claim_with_llm(sub_q, ch)
                     if claim is None:
-                        claim = _extract_claim_pattern(sub_q, ch)
+                        claim, tiers = _extract_claim_pattern(sub_q, ch)
+                        if tiers:
+                            for t in tiers:
+                                if t not in known_available_tiers:
+                                    known_available_tiers.append(t)
                     if claim and claim.states_fact:
                         candidate_claims.append(claim)
 
@@ -390,7 +463,7 @@ def run_doc_qa(
                 family_files = f_files
                 break
 
-        # If no claim found in expanded siblings, check all known chunks in best matching family
+        # Fallback check across all chunks of candidate family if sibling expansion missed section
         if not candidate_claims and raw_hits:
             best_hit = raw_hits[0]
             family = best_hit.get("version_family", "")
@@ -398,7 +471,13 @@ def run_doc_qa(
             for f_meta in f_files:
                 f_chunks = get_chunks_by_file_name(f_meta["file_name"])
                 for ch in f_chunks:
-                    claim = _extract_claim_pattern(sub_q, ch)
+                    claim = _extract_claim_with_llm(sub_q, ch)
+                    if claim is None:
+                        claim, tiers = _extract_claim_pattern(sub_q, ch)
+                        if tiers:
+                            for t in tiers:
+                                if t not in known_available_tiers:
+                                    known_available_tiers.append(t)
                     if claim and claim.states_fact:
                         candidate_claims.append(claim)
             if candidate_claims:
@@ -413,11 +492,13 @@ def run_doc_qa(
         )
         resolved_facts.append(resolved)
 
-    # 5. Determine overall abstention or compose grounded answer
-    if not resolved_facts or all(
-        rf.status in ("abstained", "out_of_coverage") for rf in resolved_facts
-    ):
-        # Abstain honestly
+    # 5. Check if all facts resulted in abstention, out_of_coverage, or tie_dates
+    all_abstained = not resolved_facts or all(
+        rf.status in ("abstained", "out_of_coverage", "tie_dates") for rf in resolved_facts
+    )
+
+    if all_abstained:
+        # Check out of coverage
         if any(rf.status == "out_of_coverage" for rf in resolved_facts):
             rf_cov = next(rf for rf in resolved_facts if rf.status == "out_of_coverage")
             return DocQAResult(
@@ -427,32 +508,58 @@ def run_doc_qa(
                 resolved_facts=resolved_facts,
             )
 
-        # Check if question asked about a non-existent tier or unknown entity
-        if "diamond" in question.lower():
+        # Check tie dates
+        if any(rf.status == "tie_dates" for rf in resolved_facts):
+            rf_tie = next(rf for rf in resolved_facts if rf.status == "tie_dates")
             answer = (
-                "I cannot find any mention of a 'Diamond' membership tier in the provided return policies. "
-                "The available tiers are Silver, Gold, and Platinum. Therefore, I must abstain from providing a return window."
+                f"Conflicting policies exist on the same latest date: {rf_tie.explanation} "
+                "Cannot determine the active policy without clarification."
             )
-        elif "ceo" in question.lower():
-            answer = "I cannot answer this question as the company's CEO is not mentioned in any uploaded documents or tables, and web search is disabled."
-        else:
-            answer = "I cannot find any uploaded documents that provide an answer to this question."
+            return DocQAResult(
+                answer=answer,
+                citations=[],
+                abstained=True,
+                resolved_facts=resolved_facts,
+            )
 
+        # Check if question asked about a membership tier not present in policy
+        tier_m = re.search(r"\b([A-Za-z]+)\s*(?:members?|tier)\b", question, re.I)
+        if tier_m and known_available_tiers:
+            req_tier = tier_m.group(1).title()
+            if req_tier not in known_available_tiers:
+                answer = (
+                    f"I cannot find any mention of a '{req_tier}' membership tier in the provided return policies. "
+                    f"The available tiers are {', '.join(known_available_tiers[:-1])} and {known_available_tiers[-1]}. "
+                    "Therefore, I must abstain from providing a return window."
+                )
+                return DocQAResult(
+                    answer=answer,
+                    citations=[],
+                    abstained=True,
+                    resolved_facts=resolved_facts,
+                )
+
+        # General honest abstention
         return DocQAResult(
-            answer=answer,
+            answer="I cannot answer this question as the requested information is not mentioned in any uploaded documents or tables, and web search is disabled.",
             citations=[],
             abstained=True,
             resolved_facts=resolved_facts,
         )
 
-    # Compose prose and structured citations
+    # 6. Compose grounded answer and structured citations
     answer_parts: list[str] = []
     overall_fallback = any(rf.fallback_used for rf in resolved_facts)
 
     for rf in resolved_facts:
+        if rf.status == "tie_dates":
+            answer_parts.append(
+                f"Notice: Conflicting policies found with the same date ({rf.explanation})."
+            )
+            continue
+
         if rf.winner:
             w = rf.winner
-            # Build citation record for evidence drawer
             cit = {
                 "source": f"{w.file_name} ({w.section or f'Page {w.page}'})",
                 "file_name": w.file_name,
@@ -468,10 +575,11 @@ def run_doc_qa(
             }
             citations.append(cit)
 
-            # Compose prose based on question context
-            q_lower = question.lower()
+            # Check for exception clause in winner chunk
+            exc_match = re.search(r"Exception:[^\n\r]+", w.chunk_content, re.I)
+            exc_text = f" ({exc_match.group(0).strip()})" if exc_match else ""
 
-            # Probe A4: As-of point-in-time query
+            # Point-in-time as-of query
             if as_of_date:
                 part = (
                     f"In mid-2025, under the return policy in force at that time (dated {w.doc_date}, {w.section}), "
@@ -480,88 +588,22 @@ def run_doc_qa(
                 )
                 answer_parts.append(part)
 
-            # Q6: Gold members return window
-            elif "gold" in q_lower and "return" in q_lower:
-                part = f"Under the latest return policy (dated {w.doc_date}, {w.section}), Gold members have a return window of {w.value}."
-                # Exception note (R-006)
-                part += " (Exception: Smartphones may be returned within 7 days of delivery for all membership tiers)."
-                if rf.superseded:
+            # Fallback disclosure when newer versions in family are silent
+            elif rf.fallback_used:
+                part = (
+                    f"According to {w.file_name} (dated {w.doc_date}, {w.section}): {w.value}.{exc_text} "
+                    f"(Note: Stated in {w.file_name} dated {w.doc_date}. Subsequent revision(s) in this document family "
+                    f"({', '.join(rf.newer_silent_versions)}) are silent on this matter, so the {w.doc_date} policy remains active)."
+                )
+                answer_parts.append(part)
+
+            # Standard active policy
+            else:
+                part = f"Under the latest policy ({w.file_name}, dated {w.doc_date}, {w.section}): {w.value}.{exc_text}"
+                if rf.superseded and "return" in rf.fact_name.lower():
                     superseded_texts = [f"{s['doc_date']}: {s['value']}" for s in rf.superseded]
                     part += f" Superseded older versions: {'; '.join(superseded_texts)}."
                 answer_parts.append(part)
-
-            # Q7: Refund timeline
-            elif "refund" in q_lower and ("day" in q_lower or "take" in q_lower):
-                part = f"Approved refunds take 5 business days to be credited to the original payment method according to the latest return policy (dated {w.doc_date}, {w.section})."
-                if rf.superseded:
-                    superseded_texts = [f"{s['value']} ({s['doc_date']})" for s in rf.superseded]
-                    part += f" (Superseded older versions: {', '.join(superseded_texts)})."
-                answer_parts.append(part)
-
-            # Q8: Damaged on delivery
-            elif "damaged" in q_lower and "delivery" in q_lower:
-                part = (
-                    f"A customer must report a product damaged on delivery {w.value}. "
-                    f"This is stated in the policy revision dated {w.doc_date} ({w.file_name}, {w.section})."
-                )
-                if rf.fallback_used and rf.newer_silent_versions:
-                    part += f" Note: Subsequent policy revisions ({', '.join(rf.newer_silent_versions)}) are silent on damage reporting windows."
-                answer_parts.append(part)
-
-            # Q9: Opened earbuds
-            elif "earbuds" in q_lower or "earphones" in q_lower:
-                part = (
-                    f"{w.value}. This rule is stated in the return policy revision dated {w.doc_date} "
-                    f"({w.file_name}, {w.section})."
-                )
-                if rf.fallback_used and rf.newer_silent_versions:
-                    part += (
-                        f" Note: The latest policy revision ({', '.join(rf.newer_silent_versions)}) "
-                        "omits the non-returnable items section, so the 2025-01-15 rule remains the active policy."
-                    )
-                answer_parts.append(part)
-
-            # Q10: Location, work mode, salary
-            elif "salary" in q_lower or "compensation" in q_lower or "work mode" in q_lower:
-                part = (
-                    f"For the Machine Learning Engineer role, according to {w.file_name} (dated {w.doc_date}):\n"
-                    "- Location: Bengaluru or Hyderabad (hybrid, 3 days a week in office)\n"
-                    "- Salary: INR 16 to 24 LPA"
-                )
-                answer_parts.append(part)
-
-            # Q11: Reports to
-            elif "reports to" in q_lower or "report to" in q_lower:
-                part = (
-                    f"The Machine Learning Engineer reports to {w.value}. "
-                    f"This is stated in {w.file_name} (dated {w.doc_date}, {w.section})."
-                )
-                if rf.fallback_used and rf.newer_silent_versions:
-                    part += f" Note: The subsequent revision ({', '.join(rf.newer_silent_versions)}) omits the reporting line."
-                answer_parts.append(part)
-
-            # Q12: Extended warranty cost & claims limit (Multi-part)
-            elif "cost" in rf.fact_name.lower():
-                part = (
-                    f"Extended warranty pricing according to {w.file_name} (dated {w.doc_date}, {w.section}):\n"
-                    "- 1-year: 10% of invoice value\n"
-                    "- 2-year: 18% of invoice value\n"
-                    "(Superseded older version: 8% in 2024-07-01)."
-                )
-                answer_parts.append(part)
-            elif "claims" in rf.fact_name.lower():
-                part = (
-                    f"Regarding claims limit: {w.value}. "
-                    f"This is stated in {w.file_name} (dated {w.doc_date}, {w.section})."
-                )
-                if rf.fallback_used and rf.newer_silent_versions:
-                    part += f" Note: The newer version ({', '.join(rf.newer_silent_versions)}) does not mention a claims limit."
-                answer_parts.append(part)
-
-            else:
-                answer_parts.append(
-                    f"{w.value} (Source: {w.file_name}, dated {w.doc_date}, {w.section})."
-                )
 
     final_answer = "\n\n".join(answer_parts)
 

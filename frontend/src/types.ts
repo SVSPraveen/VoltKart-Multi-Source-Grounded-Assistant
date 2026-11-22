@@ -27,6 +27,24 @@ export interface DocumentCitation {
 
 export type Citation = TableCitation | DocumentCitation | Record<string, any>;
 
+export interface ChartDataPoint {
+  row_id: string | number;
+  x: string;
+  y: number;
+}
+
+export interface ChartSpec {
+  chart_id: string;
+  chart_type: 'bar' | 'line' | 'pie';
+  title: string;
+  x_label: string;
+  y_label: string;
+  x_column: string;
+  y_column: string;
+  source_query_id: string;
+  data_points: ChartDataPoint[];
+}
+
 export interface ChatMessage {
   message_id: string;
   chat_id: string;
@@ -36,6 +54,7 @@ export interface ChatMessage {
   interpreted_as?: string | null;
   web_enabled?: boolean;
   citations?: Citation[];
+  charts?: ChartSpec[];
   metadata?: Record<string, any>;
   created_at?: string;
 }

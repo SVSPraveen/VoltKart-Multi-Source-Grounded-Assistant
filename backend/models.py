@@ -132,6 +132,7 @@ class ChatMessage(BaseModel):
     interpreted_as: str | None = None
     web_enabled: bool = False
     citations: list[dict[str, Any]] = Field(default_factory=list)
+    charts: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str = ""
 

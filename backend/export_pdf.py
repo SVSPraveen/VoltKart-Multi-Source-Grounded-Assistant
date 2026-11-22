@@ -29,7 +29,11 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.platypus import (
+    Image as RLImage,
+)
 
+from backend.charts import render_chart_image
 from backend.storage import get_chat, get_chat_messages
 
 # Register bundled Noto Sans Unicode fonts for native ₹ rendering
@@ -211,6 +215,16 @@ def generate_chat_pdf(chat_id: str) -> bytes:
             # Main content
             story.append(Paragraph(_clean_text(content), body_style))
             story.append(Spacer(1, 8))
+
+            # Re-render embedded analytical charts from stored specs (B10, spec 7.7)
+            charts = msg.get("charts", [])
+            for c_spec in charts:
+                try:
+                    png_bytes = render_chart_image(c_spec, width=800, height=360)
+                    chart_flowable = RLImage(io.BytesIO(png_bytes), width=480, height=216)
+                    story.append(KeepTogether([chart_flowable, Spacer(1, 10)]))
+                except Exception:
+                    pass
 
             # Render Citations if present
             if citations:

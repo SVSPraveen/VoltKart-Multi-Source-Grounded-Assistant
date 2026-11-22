@@ -147,3 +147,67 @@ def test_pdf_page_rasterization(sample_chat_with_rupees: str, tmp_path: Path):
     assert out_image_path.exists()
     assert out_image_path.stat().st_size > 1000
     doc.close()
+
+
+def test_pdf_export_with_re_rendered_chart():
+    """Verify ReportLab PDF export re-renders charts from stored query specs as embedded images (B10, spec 7.7)."""
+    from backend.charts import create_grounded_chart_spec
+
+    reset_storage()
+    init_sqlite_db()
+    chat_id = "test_chart_export_chat"
+    create_chat(chat_id, title="Analytical Chart Audit")
+
+    save_message(
+        message_id="msg_cu1",
+        chat_id=chat_id,
+        role="user",
+        content="Show a bar chart of total revenue by product category for 2025.",
+    )
+
+    query_rows = [
+        {"category": "Laptops", "revenue_inr": 11152212.55},
+        {"category": "Smartphones", "revenue_inr": 10477358.05},
+        {"category": "Televisions", "revenue_inr": 3211720.10},
+    ]
+
+    chart_spec = create_grounded_chart_spec(
+        query_result_rows=query_rows,
+        chart_type="bar",
+        title="Total Revenue by Product Category (2025)",
+        x_column="category",
+        y_column="revenue_inr",
+        x_label="Product Category",
+        y_label="Revenue (INR)",
+    )
+
+    save_message(
+        message_id="msg_ca1",
+        chat_id=chat_id,
+        role="assistant",
+        content="Here is a bar chart showing 2025 product category revenue.\n\n| Product Category | Revenue (INR) |\n| :--- | :--- |\n| Laptops | ₹11,152,212.55 |",
+        charts=[chart_spec.model_dump()],
+        citations=[
+            {
+                "type": "table",
+                "tables": ["orders", "order_items", "products"],
+                "sql": "SELECT category, revenue_inr FROM ...",
+                "row_count": 3,
+                "result_rows": query_rows,
+            }
+        ],
+    )
+
+    pdf_bytes = generate_chat_pdf(chat_id)
+    assert len(pdf_bytes) > 2000
+    assert pdf_bytes.startswith(b"%PDF")
+
+    # Verify rasterization succeeds and contains embedded image elements
+    doc = pypdfium2.PdfDocument(pdf_bytes)
+    assert len(doc) >= 1
+    page = doc[0]
+    bitmap = page.render(scale=1.5)
+    img = bitmap.to_pil()
+    assert img.width > 500
+    assert img.height > 500
+    doc.close()

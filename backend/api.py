@@ -211,12 +211,17 @@ async def send_message_stream(chat_id: str, request: MessageCreateRequest):
             for cit in response.get("citations", []):
                 yield f"event: citation\ndata: {json.dumps(cit)}\n\n"
 
+            # 4b. Stream verified analytical chart specs (B10, spec 7.8)
+            for ch in response.get("charts", []):
+                yield f"event: chart\ndata: {json.dumps(ch)}\n\n"
+
             # 5. Stream verified answer content
             answer_payload = {
                 "content": response.get("answer", ""),
                 "interpreted_as": response.get("interpreted_as"),
                 "abstained": response.get("abstained", False),
                 "citations": response.get("citations", []),
+                "charts": response.get("charts", []),
             }
             yield f"event: answer\ndata: {json.dumps(answer_payload)}\n\n"
 

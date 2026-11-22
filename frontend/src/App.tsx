@@ -187,6 +187,7 @@ export const App: React.FC = () => {
                 content: answerData.content,
                 interpreted_as: answerData.interpreted_as,
                 citations: answerData.citations || [],
+                charts: answerData.charts || [],
                 created_at: new Date().toISOString().substring(11, 19) + ' UTC',
               };
               setMessages((prev) => [...prev, asstMsg]);

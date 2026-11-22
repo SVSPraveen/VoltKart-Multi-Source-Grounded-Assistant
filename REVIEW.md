@@ -379,5 +379,11 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: When a query contains contextual referents (e.g. "that store", "that product") but no matching entity exists in the active chat's conversation context, the agent must decline or abstain honestly rather than executing an unconstrained query and misattributing results.
 - Check: Unit test `test_conversational_entity_isolation_across_chats` in `tests/unit/test_chat_isolation.py`.
 
+### R-057 — Analytical chart values must reference stored query rows and fail validation on discrepancy
+- Status: observed (Phase 6, 2026-11-22)
+- Context: Without row-level grounding validation, chart generators could fabricate or modify data points (e.g. inflating numbers or typing approximations), violating Truth Rule 3 ("The LLM never does arithmetic; values come from stored query rows").
+- Rule: Validate every ChartSpec data point against the database query result rows matching row_id and axis column names; any deviation (>0.001) must raise a validation error and abort chart emission.
+- Check: Deterministic test `test_hand_edited_or_hallucinated_value_rejected` in `tests/unit/test_chart_validation.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->
 

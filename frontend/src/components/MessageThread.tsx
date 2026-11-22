@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatMessage, Citation } from '../types';
+import { InlineChart } from './InlineChart';
 
 interface MessageThreadProps {
   messages: ChatMessage[];
@@ -111,6 +112,11 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                   >
                     {msg.content}
                   </div>
+
+                  {/* Render Analytical Charts if present (B10, spec 7.8) */}
+                  {msg.charts && msg.charts.map((c) => (
+                    <InlineChart key={c.chart_id} chart={c} />
+                  ))}
 
                   {/* Inline citation badges */}
                   {msg.citations && msg.citations.length > 0 && (

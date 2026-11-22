@@ -114,6 +114,7 @@ def init_sqlite_db() -> None:
                 interpreted_as TEXT,
                 web_enabled INTEGER NOT NULL DEFAULT 0,
                 citations TEXT,
+                charts TEXT,
                 metadata TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
@@ -136,6 +137,7 @@ def init_sqlite_db() -> None:
             ("status", "TEXT NOT NULL DEFAULT 'completed'"),
             ("interpreted_as", "TEXT"),
             ("web_enabled", "INTEGER NOT NULL DEFAULT 0"),
+            ("charts", "TEXT"),
         ]:
             try:
                 conn.execute(f"ALTER TABLE messages ADD COLUMN {col_name} {col_def};")
@@ -220,8 +222,9 @@ def save_message(
     status: str = "completed",
     interpreted_as: str | None = None,
     web_enabled: bool = False,
+    charts: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Persist a chat message with citations, status, and metadata."""
+    """Persist a chat message with citations, charts, status, and metadata."""
     init_sqlite_db()
     ensure_chat_exists(chat_id)
     with get_sqlite_connection() as conn:
@@ -230,9 +233,9 @@ def save_message(
             """
             INSERT INTO messages (
                 message_id, chat_id, role, content, status,
-                interpreted_as, web_enabled, citations, metadata, created_at
+                interpreted_as, web_enabled, citations, charts, metadata, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 message_id,
@@ -243,6 +246,7 @@ def save_message(
                 interpreted_as,
                 1 if web_enabled else 0,
                 json.dumps(citations or []),
+                json.dumps(charts or []),
                 json.dumps(metadata or {}),
                 now,
             ),
@@ -257,8 +261,9 @@ def update_message(
     interpreted_as: str | None = None,
     citations: list[dict[str, Any]] | None = None,
     metadata: dict[str, Any] | None = None,
+    charts: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Update an existing message's content, status, citations, or metadata."""
+    """Update an existing message's content, status, citations, charts, or metadata."""
     init_sqlite_db()
     updates: list[str] = []
     params: list[Any] = []
@@ -274,6 +279,9 @@ def update_message(
     if citations is not None:
         updates.append("citations = ?")
         params.append(json.dumps(citations))
+    if charts is not None:
+        updates.append("charts = ?")
+        params.append(json.dumps(charts))
     if metadata is not None:
         updates.append("metadata = ?")
         params.append(json.dumps(metadata))
@@ -301,6 +309,7 @@ def get_chat_messages(chat_id: str) -> list[dict[str, Any]]:
         for r in cur.fetchall():
             m = dict(r)
             m["citations"] = json.loads(m["citations"]) if m.get("citations") else []
+            m["charts"] = json.loads(m["charts"]) if m.get("charts") else []
             m["metadata"] = json.loads(m["metadata"]) if m.get("metadata") else {}
             m["web_enabled"] = bool(m.get("web_enabled", 0))
             messages.append(m)

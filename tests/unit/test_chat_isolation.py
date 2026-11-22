@@ -10,6 +10,7 @@ Verifies:
 from __future__ import annotations
 
 import uuid
+
 import pytest
 
 from backend.assistant import ask_assistant
@@ -36,7 +37,10 @@ def test_planted_marker_isolation_across_chats():
     marker = "PLANTED_MARKER_OP_NEBULA_88341"
 
     # Turn 1 in Chat A: Plant marker
-    res_a1 = ask_assistant(f"My secret project codename is {marker}. What store had highest revenue in 2025?", chat_id=chat_a)
+    res_a1 = ask_assistant(
+        f"My secret project codename is {marker}. What store had highest revenue in 2025?",
+        chat_id=chat_a,
+    )
     assert res_a1["abstained"] is False
     assert "highest" in res_a1["answer"].lower() or "revenue" in res_a1["answer"].lower()
 
@@ -44,7 +48,11 @@ def test_planted_marker_isolation_across_chats():
     res_b1 = ask_assistant("What is my secret project codename?", chat_id=chat_b)
     # Assistant must abstain or indicate no source covers this information
     assert marker not in res_b1["answer"]
-    assert res_b1["abstained"] is True or "cannot answer" in res_b1["answer"].lower() or "not mentioned" in res_b1["answer"].lower()
+    assert (
+        res_b1["abstained"] is True
+        or "cannot answer" in res_b1["answer"].lower()
+        or "not mentioned" in res_b1["answer"].lower()
+    )
 
     # Ask Chat B to summarize the discussion so far
     res_b2 = ask_assistant("Summarize what we discussed so far.", chat_id=chat_b)
@@ -58,7 +66,9 @@ def test_conversational_entity_isolation_across_chats():
     chat_b = f"chat_B_{uuid.uuid4().hex[:6]}"
 
     # Turn 1 in Chat A: Establishes store S04
-    t1_a = ask_assistant("Which store had the highest revenue in 2025, and who manages it?", chat_id=chat_a)
+    t1_a = ask_assistant(
+        "Which store had the highest revenue in 2025, and who manages it?", chat_id=chat_a
+    )
     assert "Vikram Sethi" in t1_a["answer"]
 
     # Turn 1 in Chat B: Asks about a completely different topic (e.g. return window)
@@ -66,7 +76,9 @@ def test_conversational_entity_isolation_across_chats():
     assert "30" in t1_b["answer"]
 
     # Turn 2 in Chat B: Asks about 'that store' without ever mentioning a store in Chat B
-    t2_b = ask_assistant("Who were the top 3 customers by spend at that store in 2025?", chat_id=chat_b)
+    t2_b = ask_assistant(
+        "Who were the top 3 customers by spend at that store in 2025?", chat_id=chat_b
+    )
     # Chat B has no store in context; it must not resolve to S04 or Vikram Sethi
     assert t2_b.get("interpreted_as") is None or "S04" not in t2_b["interpreted_as"]
     # Chat B should not return Chat A's customer Aarav Kulkarni for that store
@@ -94,7 +106,13 @@ def test_conversational_summarization_never_leaks_across_chats():
     assert "return window" in ans_b or "refund" in ans_b
 
     # Must NOT contain Chat A topics
-    chat_a_forbidden = ["highest revenue", "top 3 customers", "connaught place", "ishaan sharma", "aarav kulkarni"]
+    chat_a_forbidden = [
+        "highest revenue",
+        "top 3 customers",
+        "connaught place",
+        "ishaan sharma",
+        "aarav kulkarni",
+    ]
     for forbidden in chat_a_forbidden:
         assert forbidden not in ans_b, f"Chat B summary leaked Chat A topic: '{forbidden}'"
 

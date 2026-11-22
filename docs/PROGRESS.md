@@ -1,6 +1,6 @@
 # PROGRESS.md — Project Status and Milestones
 
-## Current State: Phase 5 (Core Chat Product) — Complete, Ready for Phase 6 Bonus
+## Current State: Phase 6 (Bonus Features) — Complete, Ready for Phase 7 Hardening
 
 ### 1. Done
 - [x] **Phase 0 (Orient, Ground, Plan)**
@@ -8,41 +8,47 @@
 - [x] **Phase 2 (Ingestion and Storage)**
 - [x] **Phase 3 (Table Question Answering)**
 - [x] **Phase 4 (Document QA with Version Resolution)**
-- [x] **Phase 5 (Core Chat Product — Complete Gate)**:
-  - Multi-Source Mixed Questions (`backend/mixed_agent.py`):
-    - Q13: Order O00174 return eligibility resolved across tables (orders, order_items, products, customers) and return policy documents (v3.0). Correctly applies smartphone 7-day policy override over Platinum 45-day window, notes user-supplied delivery date (R-007), calculates 10% restocking fee waived for Platinum with standard half-up decimal rounding (R-050), and outputs multi-source citations.
-    - Q14: Store operations notice closure claim vs December 2025 order reconciliation. Extracts notice directive (store S03 closed for renovations; use online channel), queries December 2025 orders by channel (6 online, 3 in-store totaling 94,094.55 INR), concludes PARTIALLY agrees, and outputs multi-source citations.
-  - Conversational Memory & Contextualization (`backend/assistant.py`, `backend/storage.py`):
-    - SQLite persistence for chats and messages with statuses, timestamps, citations, and metadata.
-    - Contextualization step with resolved-entities memo (e.g. `store_id = 'S04', year = 2025`), emitting quiet "Interpreted as: ..." line in UI and metadata.
-    - Restart persistence test: Process restart retains chat history; Q20 summarizes Chat 2 strictly without leaking Chat 1 topics (R-012).
-  - Server-Sent Events (SSE) Streaming API (`backend/api.py`, ADR-005):
-    - `POST /api/chats/{chat_id}/messages` streaming live status events (`status: Searching documents...`, `status: Executing SQL...`, `status: Verifying citations...`), followed by citations, answer content, and completion signal.
-    - Added full CRUD REST endpoints for chats and files (`/api/chats`, `/api/files`).
-  - ReportLab PDF Export (`backend/export_pdf.py`, ADR-006):
-    - `GET /api/chats/{chat_id}/export.pdf`: Title, export time with timezone (UTC, R-022), chronological message thread with roles, formatted citations (monospace SQL box + preview table for tables; verbatim quotes + section/page for documents), web toggle state per message.
-    - Bundled Unicode TTF font family (Noto Sans Regular & Bold) in `backend/fonts/` enabling native Indian Rupee (`₹`, U+20B9) rendering (R-013). Tested via pdfplumber text extraction and pypdfium2 page rasterization.
-  - React Frontend (`frontend/`, DESIGN.md):
-    - Vite + React + TypeScript application with editorial instrument-panel layout matching DESIGN.md tokens: warm paper (`#FDFCF7`), surface (`#F5F3EC`), hairline rules (`#E5E2D9`), deep ink (`#111827`), Volt yellow-green accent (`#D4E815`).
-    - Left rail (chats + versioned files library), center message thread (inline citation badges, quiet interpreted line), right collapsible Evidence Drawer (monospace SQL preview + tabular rows; document version timeline with superseded facts + quotes), composer with file attachment and web toggle.
-    - Responsive mobile layout with collapsible off-canvas sidebar (R-051).
-    - WASM Rollup build fallback for Windows Application Control environments (`frontend/patch-rollup.js`, R-052).
-    - Playwright automated E2E tests capturing responsive screenshots at 360, 768, 1280, 1920 px in `reports/screens/`.
-  - CORE COMPLETE GATE Verification:
-    - Live evaluation of all 15 core questions (Q1–Q14 and Q20) across 3 consecutive live runs: 15/15 PASS on all 3 runs (45/45 = 100% pass rate).
-    - Adversarial probes A1–A10: 10/10 PASS.
-    - Unit test suite: 115/115 PASS (including true process restart persistence test covering chat history, follow-up entity resolution, and summary across OS subprocess reboot).
-    - Zero hardcoding gate: `make no-hardcode` passes cleanly across all 30 files in `backend/` and `frontend/src/`.
-    - Rules `R-049`, `R-050`, `R-051`, `R-052`, `R-053`, `R-054`, `R-055` added to `REVIEW.md`.
+- [x] **Phase 5 (Core Chat Product — Complete Gate)**
+- [x] **Phase 6 (Bonus Features — Strict Order B9 -> B10 -> B8)**:
+  - **B9 (Multiple Chats & Isolation, spec 7.8, R-012, R-056)**:
+    - Full isolation by `chat_id` across SQLite persistence and agent execution state.
+    - Added comprehensive isolation unit tests (`tests/unit/test_chat_isolation.py`):
+      1. Planted secret marker isolation: planted secret token in Chat A remains completely unknown to Chat B.
+      2. Conversational entity isolation & honest abstention: context referents ("that store") in a fresh chat without prior context trigger honest abstention rather than ungrounded execution (R-056).
+      3. Summarization isolation: Chat summarization in Chat B contains zero topics from Chat A.
+      4. Deletion lifecycle isolation: deleting Chat A cleans up its messages without affecting Chat B.
+    - Re-verified core complete gate across 3 consecutive live runs (45/45 = 100%).
+  - **B10 (Analytical Inline & Exported Charts, spec 7.8, R-057)**:
+    - Implemented `backend/charts.py`: `ChartSpec`, deterministic validator `validate_chart_spec`, `create_grounded_chart_spec`, and server-side PNG rendering via Pillow (`render_chart_image`).
+    - Every chart specification maps data points directly to database query result rows matching row IDs and column names.
+    - Hand-edited or hallucinated numbers are rejected by `validate_chart_spec` (deterministic test `tests/unit/test_chart_validation.py`). Pie charts strictly enforce parts-of-a-whole percentage totals (100% ± 0.5%).
+    - Integrated chart generation in `backend/assistant.py` for Golden Q15 (2025 category revenue bar chart), Q16 (2025 monthly smartphone units line chart), and Q19 (top 5 stores revenue bar chart).
+    - Database schema & model update: Added `charts` JSON column to messages table (`backend/storage.py`, `backend/models.py`).
+    - PDF export integration: ReportLab PDF export re-renders charts from stored query specs as embedded high-resolution raster images (`backend/export_pdf.py`).
+    - React UI integration: Built `InlineChart.tsx` with SVG visualization, interactive tooltip hovering, and accessible data table rendering beneath each chart. Frontend build verified (`npm run build`).
+  - **B8 (Server-Gated Web Search, spec 7.8, R-011, R-058)**:
+    - Implemented `backend/web_search.py` with strict server-side gating (R-011). When `web_enabled` is False, search tools are unbound and an audit counter guarantees zero outbound network calls.
+    - Outbound audit tests (`tests/unit/test_web_search.py`): Assert ZERO outbound search calls when web toggle is OFF (Q17). Direct calls to `run_web_qa(web_enabled=False)` raise security exceptions.
+    - Multi-provider resilient search engine: Tavily when `TAVILY_API_KEY` is present; resilient keyless DuckDuckGo / Bing parsing fallback.
+    - Full factual page retrieval: extracts target webpage text, parses factual claim, and formats citations with title, source URL, and ISO-8601 UTC `retrieved_at` timestamp.
+    - Multi-source cross-modal comparison (Q18b): Seamlessly blends live web facts (Amazon India 7-day replacement window) with local active store policy document facts (7-day return and refund window).
+  - **Verification & Gates**:
+    - PHASE 6 BONUS GATE: Golden questions Q15–Q19 run live 3 consecutive times: 5/5 on all 3 runs (15/15 = 100% pass rate).
+    - CORE COMPLETE GATE RE-VERIFICATION: All 15 core questions (Q1–Q14, Q20) run live 3 consecutive times: 15/15 on all 3 runs (45/45 = 100% pass rate).
+    - Unit test suite: 129/129 PASS across all modules.
+    - Golden test suite: 30/30 PASS (Q1–Q20, A1–A10).
+    - Full `python scripts/runner.py verify` passes: `lint` (PASS), `format` (PASS), `no-hardcode` (PASS), `unit` (PASS), `golden` (PASS).
+    - Rules `R-056`, `R-057`, `R-058` added to `REVIEW.md`.
 
 ### 2. In Progress
-- [ ] Phase 5 Gate Report submission and owner review.
+- [ ] Phase 6 Gate Report submission and owner review.
 
-### 3. Next Steps (Phase 6: Bonus Features)
-- [ ] B9: Multi-chat management and cross-chat isolation verification.
-- [ ] B10: Analytical charts (bar, line) with stored query row grounding and PDF export re-rendering.
-- [ ] B8: Web search integration with server-side gating (Tavily / DDGS keyless fallback).
-- [ ] Run golden Q15-Q19 live 3x each.
+### 3. Next Steps (Phase 7: Hardening, Polish, and Final Delivery)
+- [ ] Adversarial testing suite expansion (probes A1–A10 under multiple chat sessions and load).
+- [ ] Run variants generation and evaluation (`make variants`).
+- [ ] Complete chat export PDF archive (`evaluation/*.pdf`).
+- [ ] Run fresh clone test (`make fresh-clone-test`).
+- [ ] Prepare explainer video talking points and live demo scripts.
 
 ### 4. Open Questions & External Dependencies
 - `GEMINI_API_KEY`: Can be configured in `.env` for live LLM inference; offline cached mode is operational.

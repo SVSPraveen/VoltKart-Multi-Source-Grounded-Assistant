@@ -561,6 +561,7 @@ def run_doc_qa(
         if rf.winner:
             w = rf.winner
             cit = {
+                "type": "document",
                 "source": f"{w.file_name} ({w.section or f'Page {w.page}'})",
                 "file_name": w.file_name,
                 "doc_date": w.doc_date,

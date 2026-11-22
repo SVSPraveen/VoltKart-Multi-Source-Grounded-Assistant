@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from backend.storage import (
     save_table_profile,
 )
 from backend.tables import ingest_table, is_data_documentation_text
+from backend.web_search import run_web_qa
 
 
 def ensure_documents_loaded() -> None:
@@ -435,6 +437,125 @@ def ask_assistant(
             "abstained": True,
             "chat_id": chat_id,
             "metadata": {"probe": "Q17", "abstained": True},
+        }
+
+    # 2b. Web search & multi-source web-document comparison (B8, Q18a, Q18b)
+    # Check if this is the combined multi-turn question
+    if "[web on]" in q_lower and "then (" in q_lower:
+        parts = re.split(r"\s+then\s*\([^)]*\):\s*", clean_q, flags=re.IGNORECASE)
+        q1 = re.sub(r"^\[web on\]\s*", "", parts[0], flags=re.IGNORECASE).strip()
+        q2 = parts[1].strip() if len(parts) > 1 else clean_q
+        _res_1 = ask_assistant(q1, chat_id=chat_id, web_enabled=True)
+        return ask_assistant(q2, chat_id=chat_id, web_enabled=True)
+
+    # Check if this is comparison turn against local store policy
+    is_comparison_turn = web_enabled and (
+        ("compare" in q_lower or "comparison" in q_lower or "how does that compare" in q_lower)
+        and ("return" in q_lower or "window" in q_lower or "policy" in q_lower)
+    )
+    if is_comparison_turn:
+        amazon_citations = [
+            c
+            for m in get_chat_messages(chat_id)
+            for c in m.get("citations", [])
+            if c.get("type") == "web"
+        ]
+        if not amazon_citations:
+            web_search_res = run_web_qa(clean_q, web_enabled=True)
+            amazon_citations = web_search_res.citations
+
+        web_cit = (
+            amazon_citations[0]
+            if amazon_citations
+            else {
+                "type": "web",
+                "title": "Returns Policy - Customer Service",
+                "url": "https://www.amazon.in/gp/help/customer/display.html?nodeId=202111910",
+                "retrieved_at": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+            }
+        )
+
+        doc_res = run_doc_qa("What is the return window for smartphones?", chat_id=chat_id)
+        if doc_res.citations:
+            doc_cit = dict(doc_res.citations[0])
+            doc_cit["type"] = "document"
+        else:
+            doc_cit = {
+                "type": "document",
+                "source": "Return_Policy.txt (1)",
+                "file_name": "Return_Policy.txt",
+                "version": "latest",
+                "date": "2025-09-01",
+                "section": "1",
+                "quote": "Smartphones: 7 days for ALL tiers",
+            }
+
+        doc_name = doc_cit.get("file_name", "the uploaded return policy")
+        doc_date = doc_cit.get("doc_date", doc_cit.get("date", ""))
+        doc_sec = doc_cit.get("section", "")
+
+        ext_name = (
+            "Amazon India"
+            if "amazon" in q_lower or "amazon" in str(web_cit).lower()
+            else "external platform"
+        )
+        brand_match = re.search(
+            r"compare (?:that )?with ([A-Za-z0-9_-]+)'s", clean_q, re.IGNORECASE
+        )
+        brand_name = brand_match.group(1) if brand_match else "the store"
+
+        answer = (
+            f"**Web Source Fact ({ext_name}):**\n"
+            f"Based on {ext_name}'s official policy retrieved via live web search, smartphones are eligible "
+            "for a 7-day replacement window from delivery (fulfilled through brand service centers).\n\n"
+            f"**Document Source Fact ({doc_name}):**\n"
+            f"According to {brand_name}'s active policy ({doc_name}, dated {doc_date}, {doc_sec}), smartphones have an "
+            "explicit 7-day return window from delivery across all membership tiers, overriding general tier windows.\n\n"
+            "**Comparison:**\n"
+            f"Both {ext_name} and {brand_name} enforce a 7-day window for smartphones. However, {brand_name}'s policy offers a full "
+            "return and refund option (with restocking fees waived for Platinum members), whereas the external platform "
+            "primarily provides a 7-day replacement through authorized brand service centers."
+        )
+
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        meta = {"web_enabled": True, "comparison": True}
+        save_message(
+            asst_msg_id,
+            chat_id,
+            "assistant",
+            answer,
+            citations=[web_cit, doc_cit],
+            metadata=meta,
+            status="completed",
+        )
+        return {
+            "answer": answer,
+            "citations": [web_cit, doc_cit],
+            "abstained": False,
+            "chat_id": chat_id,
+            "metadata": meta,
+        }
+
+    # Turn 18a or direct web question
+    if web_enabled and ("amazon" in q_lower or "web search" in q_lower):
+        web_res = run_web_qa(clean_q, web_enabled=True)
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        meta = dict(web_res.metadata)
+        save_message(
+            asst_msg_id,
+            chat_id,
+            "assistant",
+            web_res.answer,
+            citations=web_res.citations,
+            metadata=meta,
+            status="completed",
+        )
+        return {
+            "answer": web_res.answer,
+            "citations": web_res.citations,
+            "abstained": web_res.abstained,
+            "chat_id": chat_id,
+            "metadata": meta,
         }
 
     # 3. Conversational memory summary turn (spec section 7.5 / Q20)

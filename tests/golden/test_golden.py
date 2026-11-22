@@ -33,11 +33,20 @@ def test_golden_question(question_spec: dict):
     chat_id = f"chat_{question_spec.get('chat', 1)}"
     web_enabled = bool(question_spec.get("web", False))
 
-    response = ask_assistant(
-        question=question_spec["question"],
-        chat_id=chat_id,
-        web_enabled=web_enabled,
-    )
+    if "turns" in question_spec:
+        response = None
+        for turn in question_spec["turns"]:
+            response = ask_assistant(
+                question=turn["question"],
+                chat_id=chat_id,
+                web_enabled=bool(turn.get("web", web_enabled)),
+            )
+    else:
+        response = ask_assistant(
+            question=question_spec["question"],
+            chat_id=chat_id,
+            web_enabled=web_enabled,
+        )
 
     evaluate_response(response, question_spec)
 

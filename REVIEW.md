@@ -385,5 +385,11 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Validate every ChartSpec data point against the database query result rows matching row_id and axis column names; any deviation (>0.001) must raise a validation error and abort chart emission.
 - Check: Deterministic test `test_hand_edited_or_hallucinated_value_rejected` in `tests/unit/test_chart_validation.py`.
 
+### R-058 — Server-side search tool gating must deterministically enforce zero outbound network calls when web search is disabled
+- Status: observed (Phase 6, 2026-11-22)
+- Context: When web search is toggled off, relying on LLM prompting or soft UI toggles could allow accidental network leakage or prompt injection attacks requesting external lookups.
+- Rule: Enforce server-side gating in `backend/web_search.py` and `backend/assistant.py` that halts execution before tool invocation and verifies zero outbound network calls are made when web search is disabled.
+- Check: Unit test `test_q17_web_off_assert_zero_outbound_calls` in `tests/unit/test_web_search.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->
 

@@ -77,6 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onNewChat}
           title="Start New Conversation"
+          aria-label="Create new conversation"
           style={{
             padding: '6px 10px',
             backgroundColor: 'var(--accent-volt)',
@@ -146,6 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onDeleteChat(c.chat_id);
                     }}
                     title="Delete Chat"
+                    aria-label={`Delete conversation ${c.title || c.chat_id}`}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -220,6 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={{ padding: '12px', borderTop: '1px solid var(--border-subtle)' }}>
         <button
           onClick={onOpenSummary}
+          aria-label="View Ingestion Schema Card"
           style={{
             width: '100%',
             padding: '8px',

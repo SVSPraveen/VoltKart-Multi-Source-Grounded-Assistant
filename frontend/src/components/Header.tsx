@@ -37,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="header-menu-btn"
             onClick={onToggleMobileSidebar}
             title="Toggle Sidebar"
+            aria-label="Toggle Navigation Sidebar"
             style={{
               background: 'none',
               border: '1px solid var(--border-subtle)',
@@ -62,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onOpenSummary}
           title="Inspect Table Schemas and Document Families"
+          aria-label="Open Ingestion Summary Card"
           style={{
             padding: '6px 10px',
             backgroundColor: 'transparent',
@@ -78,6 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onExportPdf}
           title="Export publication-grade PDF report (C7)"
+          aria-label="Export Chat as PDF"
           style={{
             padding: '6px 12px',
             backgroundColor: 'var(--bg-surface)',
@@ -99,6 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onToggleDrawer}
           title="Toggle Evidence Drawer"
+          aria-label="Toggle Evidence Drawer"
           style={{
             padding: '6px 10px',
             backgroundColor: isDrawerOpen ? 'var(--accent-volt-subtle)' : 'transparent',

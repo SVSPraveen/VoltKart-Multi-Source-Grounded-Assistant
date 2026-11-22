@@ -61,6 +61,7 @@ export const Composer: React.FC<ComposerProps> = ({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask a question grounded in your tables and documents..."
+            aria-label="User query message input"
             rows={2}
             disabled={isSending}
             style={{
@@ -104,6 +105,7 @@ export const Composer: React.FC<ComposerProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Attach CSV tables or PDF/DOCX/TXT/MD documents"
+              aria-label="Upload CSV or document files"
               style={{
                 background: 'none',
                 border: '1px solid var(--border-subtle)',
@@ -134,6 +136,7 @@ export const Composer: React.FC<ComposerProps> = ({
               <input
                 type="checkbox"
                 checked={webEnabled}
+                aria-label="Toggle server-side web search"
                 onChange={(e) => setWebEnabled(e.target.checked)}
                 style={{ cursor: 'pointer' }}
               />
@@ -154,6 +157,7 @@ export const Composer: React.FC<ComposerProps> = ({
           {/* Send button */}
           <button
             type="submit"
+            aria-label="Send query message"
             disabled={!input.trim() || isSending}
             style={{
               padding: '6px 16px',

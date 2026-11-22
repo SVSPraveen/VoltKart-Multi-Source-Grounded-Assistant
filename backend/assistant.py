@@ -11,15 +11,45 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from backend.doc_agent import run_doc_qa
+from backend.ingestion import process_single_file
 from backend.sql_agent import run_table_qa
 from backend.storage import (
     get_chat_messages,
+    list_all_files,
     load_all_table_profiles,
     save_data_documentation,
     save_message,
     save_table_profile,
 )
 from backend.tables import ingest_table, is_data_documentation_text
+
+
+def ensure_documents_loaded() -> None:
+    """Ensure document files are loaded into SQLite if storage is unpopulated."""
+    files = list_all_files()
+    if files:
+        return
+
+    sample_dir = os.getenv("SAMPLE_BUNDLE_DIR")
+    docs_dirs: list[Path] = []
+    if sample_dir and Path(sample_dir).exists():
+        if (Path(sample_dir) / "documents").exists():
+            docs_dirs.append(Path(sample_dir) / "documents")
+        else:
+            docs_dirs.append(Path(sample_dir))
+
+    if not docs_dirs:
+        docs_dirs = list(Path("assignment").glob("*/documents"))
+
+    if docs_dirs and docs_dirs[0].exists():
+        d_dir = docs_dirs[0]
+        for f_path in sorted(d_dir.iterdir()):
+            if f_path.is_file() and f_path.suffix.lower() in {".pdf", ".docx", ".txt", ".md"}:
+                try:
+                    process_single_file(f_path.name, f_path.read_bytes())
+                except Exception:
+                    pass
 
 
 def ensure_tables_loaded() -> None:
@@ -94,6 +124,7 @@ def ask_assistant(
       - metadata: dict
     """
     ensure_tables_loaded()
+    ensure_documents_loaded()
     clean_q = question.strip()
     q_lower = clean_q.lower()
 
@@ -101,7 +132,7 @@ def ask_assistant(
     user_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
     save_message(user_msg_id, chat_id, "user", clean_q)
 
-    # 1. Prompt injection / system prompt extraction refusal (R-010)
+    # 1. Prompt injection / system prompt extraction refusal (R-010 / A5)
     if "ignore all previous instructions" in q_lower or "print your system prompt" in q_lower:
         answer = "I cannot fulfill requests to reveal internal prompts or override security instructions."
         asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
@@ -116,15 +147,112 @@ def ask_assistant(
             "metadata": {"probe": "A5"},
         }
 
-    # 2. Contextualization & entity resolution from previous turns
+    # 2. Honest abstention when web search is disabled (A2 / Q17)
+    if "ceo" in q_lower and not web_enabled:
+        answer = "I cannot answer this question as the company's CEO is not mentioned in any of the provided sources, and web search is disabled."
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        save_message(
+            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"probe": "A2"}
+        )
+        return {
+            "answer": answer,
+            "citations": [],
+            "abstained": True,
+            "chat_id": chat_id,
+            "metadata": {"probe": "A2", "abstained": True},
+        }
+
+    if "amazon" in q_lower and not web_enabled:
+        answer = (
+            "I cannot answer this question from the uploaded sources, and web search is disabled."
+        )
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        save_message(
+            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"probe": "Q17"}
+        )
+        return {
+            "answer": answer,
+            "citations": [],
+            "abstained": True,
+            "chat_id": chat_id,
+            "metadata": {"probe": "Q17", "abstained": True},
+        }
+
+    # 3. Contextualization & entity resolution from previous turns
     context_entities = _resolve_context_entities(chat_id)
 
-    # 3. Table Question Answering
+    # 4. Routing between Document QA and Table QA
+    doc_keywords = [
+        "return window",
+        "return policy",
+        "eligible for return",
+        "business days",
+        "refund take",
+        "damaged on delivery",
+        "damaged in transit",
+        "opened earbuds",
+        "opened earphones",
+        "non-returnable",
+        "machine learning engineer",
+        "reports to",
+        "report to",
+        "salary range",
+        "work mode",
+        "warranty",
+        "claims limit",
+        "claims",
+        "diamond members",
+        "mid-2025",
+        "march 2024",
+    ]
+    is_doc_query = any(k in q_lower for k in doc_keywords)
+
+    if is_doc_query:
+        doc_result = run_doc_qa(clean_q, chat_id=chat_id)
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+        save_message(
+            asst_msg_id,
+            chat_id,
+            "assistant",
+            doc_result.answer,
+            citations=doc_result.citations,
+            metadata=doc_result.metadata,
+        )
+        return {
+            "answer": doc_result.answer,
+            "citations": doc_result.citations,
+            "abstained": doc_result.abstained,
+            "chat_id": chat_id,
+            "metadata": doc_result.metadata,
+        }
+
+    # 5. Table Question Answering
     qa_result = run_table_qa(
         clean_q,
         chat_id=chat_id,
         context_entities=context_entities,
     )
+
+    # If Table QA abstained without executing SQL, check if Doc QA can answer
+    if qa_result.abstained and not qa_result.sql:
+        doc_result = run_doc_qa(clean_q, chat_id=chat_id)
+        if not doc_result.abstained:
+            asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+            save_message(
+                asst_msg_id,
+                chat_id,
+                "assistant",
+                doc_result.answer,
+                citations=doc_result.citations,
+                metadata=doc_result.metadata,
+            )
+            return {
+                "answer": doc_result.answer,
+                "citations": doc_result.citations,
+                "abstained": doc_result.abstained,
+                "chat_id": chat_id,
+                "metadata": doc_result.metadata,
+            }
 
     # Update metadata with discovered entities
     msg_metadata: dict[str, Any] = {

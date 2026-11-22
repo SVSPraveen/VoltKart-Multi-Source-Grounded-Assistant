@@ -331,4 +331,29 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Strip outer quotation marks (`'`, `"`) from candidate quotes prior to verifying substring presence in chunk content.
 - Check: Unit test `test_quote_verification_exact_and_paraphrase` in `tests/unit/test_version_resolver.py`.
 
+### R-049 — Query intent routing must prioritize unambiguous domain indicators and bidirectional fallback
+- Status: observed (Phase 5, 2026-11-22)
+- Context: Keywords like "return" and "refund" in general document keyword lists hijacked table questions (e.g. Q3: product returned most often, Q5: refund amount by region) into document retrieval, which abstained and never attempted table QA.
+- Rule: Route first on explicit cross-modal mixed patterns (e.g. order ID + policy terms), then clear tabular aggregation indicators (e.g. "returned most often", "by region", "revenue", "spend"), then document terms. Ensure bidirectional fallback so an abstention from one tool without execution attempts the other tool before declaring failure.
+- Check: Golden Q3, Q5, Q13, Q14 in `scripts/run_core_evals.py`.
+
+### R-050 — Financial percentages and restocking fee calculations must use standard half-up decimal rounding
+- Status: observed (Phase 5, 2026-11-22)
+- Context: In Q13, calculating 10% restocking fee on 49,636.55 INR using Python's default IEEE 754 float `round(..., 2)` (banker's rounding half-to-even) evaluated 4,963.655 to 4,963.65 instead of the expected financial figure 4,963.66.
+- Rule: Always calculate currency percentages and fee amounts using `decimal.Decimal` with `ROUND_HALF_UP` to match exact financial standards and independent audit ground truth.
+- Check: Golden Q13 live evaluation asserting exact fee match `4963.66`.
+
+### R-051 — Mobile viewport layouts must collapse desktop rails off-canvas with visible hamburger controls
+- Status: observed (Phase 5, 2026-11-22)
+- Context: On narrow mobile screens (360px), a fixed 260px desktop sidebar squeezed the conversational thread into less than 100px of visible width, breaking readability and composer layout.
+- Rule: Use responsive media queries to collapse desktop rails off-canvas on screens <= 768px, providing visible hamburger controls and backdrop overlays while giving 100% viewport width to the thread.
+- Check: Playwright responsive screenshot test `tests/e2e/test_ui_screens.py` and visual verification of `reports/screens/screen-360.png`.
+
+### R-052 — Windows Application Control execution environments require WASM-based Rollup fallbacks
+- Status: observed (Phase 5, 2026-11-22)
+- Context: In environments with Windows Application Control (WDAC/AppLocker), loading native `.node` binary dynamic libraries (`rollup.win32-x64-msvc.node`) failed with `ERR_DLOPEN_FAILED`.
+- Rule: Provide pure WebAssembly/JavaScript execution fallbacks (`@rollup/wasm-node`) and automated patching in frontend build toolchains so builds succeed deterministically across restricted enterprise and classroom environments.
+- Check: `frontend/patch-rollup.js` and clean execution of `npm run build` in `frontend/`.
+
 <!-- New rules go below. Keep numbering sequential. -->
+

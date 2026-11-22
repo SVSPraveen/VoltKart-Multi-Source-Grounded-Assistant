@@ -313,9 +313,18 @@ def main() -> int:
         return code
     elif args.subcommand == "clean":
         return clean_project()
-    elif args.subcommand in ("eval", "e2e", "fresh-clone-test"):
+    elif args.subcommand == "eval":
+        code, _, out = run_command([py, str(root / "scripts" / "run_core_evals.py")], cwd=root)
+        print(out)
+        return code
+    elif args.subcommand == "e2e":
+        code, _, out = run_command([py, "-m", "pytest", "tests/e2e"], cwd=root)
+        print(out)
+        return code
+    elif args.subcommand in ("fresh-clone-test",):
         print(f"Target '{args.subcommand}' will be configured in subsequent phases.")
         return 0
+
 
     return 0
 

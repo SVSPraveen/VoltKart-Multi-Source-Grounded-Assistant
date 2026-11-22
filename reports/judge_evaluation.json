@@ -1,0 +1,1328 @@
+{
+  "timestamp": "2026-11-22 14:27:29Z",
+  "total_evaluated": 30,
+  "passed_count": 30,
+  "pass_rate_pct": 100.0,
+  "verdicts": [
+    {
+      "question_id": "1",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "2",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "3",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "4",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "5",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "6",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "7",
+      "passed": true,
+      "overall_score": 0.985,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 0.7,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Monetary values lack \u20b9 or INR currency symbol."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "8",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "9",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "10",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "11",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "12",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "13",
+      "passed": true,
+      "overall_score": 0.955,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 0.7,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Document citation missing verbatim quote."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "14",
+      "passed": true,
+      "overall_score": 0.955,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 0.7,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Document citation missing verbatim quote."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "15",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "16",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "17",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "18",
+      "passed": true,
+      "overall_score": 0.955,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 0.7,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Document citation missing verbatim quote."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "19",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "20",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A1",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A2",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A3",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A4",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A5",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A6",
+      "passed": true,
+      "overall_score": 0.985,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 0.7,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Monetary values lack \u20b9 or INR currency symbol."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A7",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Correctly and honestly abstained when sources are absent or query is restricted."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A8",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A9",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    },
+    {
+      "question_id": "A10",
+      "passed": true,
+      "overall_score": 1.0,
+      "dimensions": {
+        "abstention_honesty": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Appropriate non-abstention on valid query."
+        },
+        "correctness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.3,
+          "reason": "All expected numbers and entities verified."
+        },
+        "provenance": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.2,
+          "reason": "Version provenance and fallback disclosure verified."
+        },
+        "citation_sufficiency": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.15,
+          "reason": "Sufficient structured citations present."
+        },
+        "grounding_faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.1,
+          "reason": "No ungrounded or fabricated claims detected."
+        },
+        "formatting_tone": {
+          "score": 1.0,
+          "passed": true,
+          "weight": 0.05,
+          "reason": "Clean professional formatting."
+        }
+      },
+      "feedback": []
+    }
+  ]
+}

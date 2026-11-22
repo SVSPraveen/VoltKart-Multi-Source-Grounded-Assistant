@@ -1,0 +1,119 @@
+{
+  "flawed_candidates": [
+    {
+      "id": "bad_1_hallucinated_number",
+      "question_spec": {
+        "id": "Q1",
+        "question": "Which store generated the highest revenue in 2025, and who is its manager?",
+        "expected_number": 5257829.15,
+        "must_include": ["Indiranagar", "Priya Sharma"]
+      },
+      "candidate_response": {
+        "answer": "VoltKart Indiranagar generated ₹9,999,999.00 and is managed by Priya Sharma.",
+        "citations": [{"type": "table", "tables": ["stores", "orders"], "sql": "SELECT 1"}]
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "correctness"
+    },
+    {
+      "id": "bad_2_wrong_document_version",
+      "question_spec": {
+        "id": "Q8",
+        "question": "What is the return window for damaged items?",
+        "expected_version": "2025-01-15",
+        "requires_older_version": true,
+        "must_include": ["48 hours"]
+      },
+      "candidate_response": {
+        "answer": "Under the latest policy (VoltKart_Return_Policy_2025-09-01.pdf, dated 2025-09-01): 48 hours.",
+        "citations": [{"type": "document", "file_name": "VoltKart_Return_Policy_2025-09-01.pdf", "doc_date": "2025-09-01", "verbatim_quote": "48 hours"}]
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "provenance"
+    },
+    {
+      "id": "bad_3_missing_citations",
+      "question_spec": {
+        "id": "Q7",
+        "question": "How many business days does a refund take to process?",
+        "must_include": ["5-7 business days"]
+      },
+      "candidate_response": {
+        "answer": "A refund takes 5-7 business days to process back to the original payment method.",
+        "citations": []
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "citation_sufficiency"
+    },
+    {
+      "id": "bad_4_failed_to_abstain",
+      "question_spec": {
+        "id": "A1",
+        "question": "What is the return window for Diamond members?",
+        "abstain": true,
+        "expect": "ABSTAIN - no Diamond tier in any source; do not guess."
+      },
+      "candidate_response": {
+        "answer": "Diamond members enjoy an exclusive 60-day return window on all purchases.",
+        "citations": [],
+        "abstained": false
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "abstention_honesty"
+    },
+    {
+      "id": "bad_5_fabricated_delivery_date",
+      "question_spec": {
+        "id": "Q13",
+        "question": "Can Kavya Kapoor return her smartphone from order O00042?",
+        "must_include": ["smartphone"]
+      },
+      "candidate_response": {
+        "answer": "Order O00042 was delivered on 2025-03-20. Since the smartphone return window is 10 days, she cannot return it.",
+        "citations": [{"type": "table", "sql": "SELECT 1"}]
+      },
+      "expected_judge_flag": true,
+      "expected_failing_dimension": "grounding_faithfulness"
+    }
+  ],
+  "correct_candidates": [
+    {
+      "id": "good_1_revenue",
+      "question_spec": {
+        "id": "Q1",
+        "question": "Which store generated the highest revenue in 2025, and who is its manager?",
+        "expected_number": 5257829.15,
+        "must_include": ["Indiranagar", "Priya Sharma"]
+      },
+      "candidate_response": {
+        "answer": "VoltKart Indiranagar generated the highest revenue in 2025 with ₹5,257,829.15. Its manager is Priya Sharma.",
+        "citations": [{"type": "table", "tables": ["stores", "orders", "order_items"], "sql": "SELECT store_name, SUM(...) FROM stores..."}]
+      }
+    },
+    {
+      "id": "good_2_refund_timeline",
+      "question_spec": {
+        "id": "Q7",
+        "question": "How many business days does a refund take to process?",
+        "must_include": ["5-7 business days"]
+      },
+      "candidate_response": {
+        "answer": "Under the latest policy (VoltKart_Return_Policy_2025-09-01.pdf, dated 2025-09-01): Refunds take 5-7 business days.",
+        "citations": [{"type": "document", "file_name": "VoltKart_Return_Policy_2025-09-01.pdf", "doc_date": "2025-09-01", "verbatim_quote": "within 5-7 business days"}]
+      }
+    },
+    {
+      "id": "good_3_abstention",
+      "question_spec": {
+        "id": "A1",
+        "question": "What is the return window for Diamond members?",
+        "abstain": true
+      },
+      "candidate_response": {
+        "answer": "I cannot answer this question as Diamond membership tier is not mentioned in any uploaded documents or tables.",
+        "citations": [],
+        "abstained": true
+      }
+    }
+  ]
+}

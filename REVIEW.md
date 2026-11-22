@@ -295,4 +295,22 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: When computing an alternative leader metric with a nested attribute breakdown, first query the leader by the primary aggregate metric (`GROUP BY product_id ORDER BY SUM(units) DESC LIMIT 1`), then query that leader's breakdown.
 - Check: Q3 live evaluation and `test_table_qa_revenue_query` in `test_sql_agent.py`.
 
+### R-043 — Chronological sorting keys must rank undated documents with lower priority than dated documents
+- Status: observed (Phase 4, 2026-11-22)
+- Context: In `resolve_fact_across_versions`, sorting candidate claims by `(0, doc_date)` and `(1, "9999-99-99")` placed undated documents at the very end of an ascending sort, causing `stating_claims[-1]` to erroneously select an undated document over a dated document.
+- Rule: Date sort keys must explicitly assign higher priority tuples to dated documents (e.g. `(1, doc_date)`) and lower priority to undated documents (e.g. `(0, "0000-00-00")`) so latest-date lookups deterministically prefer dated sources.
+- Check: Unit test `test_resolver_undated_document_ranked_last` in `tests/unit/test_version_resolver.py`.
+
+### R-044 — Superseded historical facts belong in evidence drawer metadata, not answer prose unless requested
+- Status: observed (Phase 4, 2026-11-22)
+- Context: Generated prose for Q10 initially included superseded compensation figures in the final answer text `(Superseded version 2025-03-10 offered INR 12 to 18 LPA)`, which violated the deterministic `must_not: ['12 to 18']` negative assertion.
+- Rule: Keep final answer prose focused exclusively on the winning active fact; record superseded values and older document numbers strictly in structured citation metadata (`citations[].superseded`) for the evidence drawer.
+- Check: Golden Q10 live eval asserting `must_not: ['12 to 18']`.
+
+### R-045 — Temporal point-in-time queries must be evaluated prior to unconstrained topic templates
+- Status: observed (Phase 4, 2026-11-22)
+- Context: In `doc_agent.py`, evaluating `"gold" in q_lower` before `as_of_date` caused temporal probe A4 ("What was the return window for Gold members in mid-2025?") to hit the default unconstrained return policy template rather than the point-in-time branch.
+- Rule: Point-in-time temporal queries (`as_of_date`) must be evaluated before general unconstrained topic matchers.
+- Check: Adversarial probe A4 live eval asserting `2025-01-15` and `20 days`.
+
 <!-- New rules go below. Keep numbering sequential. -->

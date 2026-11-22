@@ -110,3 +110,40 @@ class IngestionSummary(BaseModel):
     documentation_loaded: bool = False
     errors: list[IngestionFileError] = Field(default_factory=list)
     timestamp: str = ""
+
+
+class ChatSession(BaseModel):
+    """Chat session metadata."""
+
+    chat_id: str
+    title: str
+    created_at: str
+    updated_at: str
+
+
+class ChatMessage(BaseModel):
+    """Stored chat message."""
+
+    message_id: str
+    chat_id: str
+    role: str
+    content: str
+    status: str = "completed"
+    interpreted_as: str | None = None
+    web_enabled: bool = False
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str = ""
+
+
+class MessageCreateRequest(BaseModel):
+    """Request payload to send a message to a chat."""
+
+    content: str
+    web_enabled: bool = False
+
+
+class ChatCreateRequest(BaseModel):
+    """Request payload to create a new chat."""
+
+    title: str = "New Chat"

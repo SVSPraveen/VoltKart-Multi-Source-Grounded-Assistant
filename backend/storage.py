@@ -110,6 +110,9 @@ def init_sqlite_db() -> None:
                 chat_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'completed',
+                interpreted_as TEXT,
+                web_enabled INTEGER NOT NULL DEFAULT 0,
                 citations TEXT,
                 metadata TEXT,
                 created_at TEXT NOT NULL,
@@ -128,6 +131,17 @@ def init_sqlite_db() -> None:
             """
         )
 
+        # Migrations for existing tables if needed
+        for col_name, col_def in [
+            ("status", "TEXT NOT NULL DEFAULT 'completed'"),
+            ("interpreted_as", "TEXT"),
+            ("web_enabled", "INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE messages ADD COLUMN {col_name} {col_def};")
+            except sqlite3.OperationalError:
+                pass
+
 
 def ensure_chat_exists(chat_id: str, title: str = "New Chat") -> None:
     """Ensure a chat row exists in SQLite for foreign key constraints."""
@@ -143,6 +157,59 @@ def ensure_chat_exists(chat_id: str, title: str = "New Chat") -> None:
         )
 
 
+def create_chat(chat_id: str, title: str = "New Chat") -> dict[str, Any]:
+    """Create a new chat session."""
+    init_sqlite_db()
+    now = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
+    with get_sqlite_connection() as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO chats (chat_id, created_at, updated_at, title)
+            VALUES (?, ?, ?, ?)
+            """,
+            (chat_id, now, now, title),
+        )
+    return {"chat_id": chat_id, "title": title, "created_at": now, "updated_at": now}
+
+
+def list_chats() -> list[dict[str, Any]]:
+    """List all chat sessions ordered by last updated."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute("SELECT * FROM chats ORDER BY updated_at DESC")
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_chat(chat_id: str) -> dict[str, Any] | None:
+    """Retrieve metadata for a specific chat."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute("SELECT * FROM chats WHERE chat_id = ?", (chat_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def update_chat_title(chat_id: str, title: str) -> None:
+    """Update title of a chat session."""
+    init_sqlite_db()
+    now = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
+    with get_sqlite_connection() as conn:
+        conn.execute(
+            "UPDATE chats SET title = ?, updated_at = ? WHERE chat_id = ?",
+            (title, now, chat_id),
+        )
+
+
+def delete_chat(chat_id: str) -> bool:
+    """Delete a chat and all its messages."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        cur = conn.execute("DELETE FROM chats WHERE chat_id = ?", (chat_id,))
+        return cur.rowcount > 0
+
+
 def save_message(
     message_id: str,
     chat_id: str,
@@ -150,26 +217,74 @@ def save_message(
     content: str,
     citations: list[dict[str, Any]] | None = None,
     metadata: dict[str, Any] | None = None,
+    status: str = "completed",
+    interpreted_as: str | None = None,
+    web_enabled: bool = False,
 ) -> None:
-    """Persist a chat message with citations and metadata."""
+    """Persist a chat message with citations, status, and metadata."""
     init_sqlite_db()
     ensure_chat_exists(chat_id)
     with get_sqlite_connection() as conn:
         now = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
         conn.execute(
             """
-            INSERT INTO messages (message_id, chat_id, role, content, citations, metadata, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO messages (
+                message_id, chat_id, role, content, status,
+                interpreted_as, web_enabled, citations, metadata, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 message_id,
                 chat_id,
                 role,
                 content,
+                status,
+                interpreted_as,
+                1 if web_enabled else 0,
                 json.dumps(citations or []),
                 json.dumps(metadata or {}),
                 now,
             ),
+        )
+        conn.execute("UPDATE chats SET updated_at = ? WHERE chat_id = ?", (now, chat_id))
+
+
+def update_message(
+    message_id: str,
+    content: str | None = None,
+    status: str | None = None,
+    interpreted_as: str | None = None,
+    citations: list[dict[str, Any]] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Update an existing message's content, status, citations, or metadata."""
+    init_sqlite_db()
+    updates: list[str] = []
+    params: list[Any] = []
+    if content is not None:
+        updates.append("content = ?")
+        params.append(content)
+    if status is not None:
+        updates.append("status = ?")
+        params.append(status)
+    if interpreted_as is not None:
+        updates.append("interpreted_as = ?")
+        params.append(interpreted_as)
+    if citations is not None:
+        updates.append("citations = ?")
+        params.append(json.dumps(citations))
+    if metadata is not None:
+        updates.append("metadata = ?")
+        params.append(json.dumps(metadata))
+
+    if not updates:
+        return
+
+    params.append(message_id)
+    with get_sqlite_connection() as conn:
+        conn.execute(
+            f"UPDATE messages SET {', '.join(updates)} WHERE message_id = ?", tuple(params)
         )
 
 
@@ -185,8 +300,9 @@ def get_chat_messages(chat_id: str) -> list[dict[str, Any]]:
         messages = []
         for r in cur.fetchall():
             m = dict(r)
-            m["citations"] = json.loads(m["citations"]) if m["citations"] else []
-            m["metadata"] = json.loads(m["metadata"]) if m["metadata"] else {}
+            m["citations"] = json.loads(m["citations"]) if m.get("citations") else []
+            m["metadata"] = json.loads(m["metadata"]) if m.get("metadata") else {}
+            m["web_enabled"] = bool(m.get("web_enabled", 0))
             messages.append(m)
         return messages
 
@@ -326,6 +442,33 @@ def list_all_files() -> list[dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         cur = conn.execute("SELECT * FROM files ORDER BY doc_date DESC, file_name ASC")
         return [dict(r) for r in cur.fetchall()]
+
+
+def delete_file_by_sha256(sha256: str) -> bool:
+    """Delete a file and its associated chunks from SQLite and DuckDB if tabular."""
+    init_sqlite_db()
+    with get_sqlite_connection() as conn:
+        row = conn.execute(
+            "SELECT file_name, file_type FROM files WHERE sha256 = ?", (sha256,)
+        ).fetchone()
+        if not row:
+            return False
+        file_name = row[0]
+
+        conn.execute("DELETE FROM chunks_fts WHERE file_sha256 = ?", (sha256,))
+        conn.execute("DELETE FROM chunks WHERE file_sha256 = ?", (sha256,))
+        conn.execute("DELETE FROM files WHERE sha256 = ?", (sha256,))
+
+    if file_name.lower().endswith(".csv"):
+        tbl_name = Path(file_name).stem.lower().replace("-", "_").replace(" ", "_")
+        delete_table_profile(tbl_name)
+        if DUCKDB_PATH.exists():
+            with get_duckdb_write_connection() as duck_conn:
+                try:
+                    duck_conn.execute(f'DROP TABLE IF EXISTS "{tbl_name}";')
+                except Exception:
+                    pass
+    return True
 
 
 def save_table_profile(profile: TableProfile, uploaded_at: str) -> None:

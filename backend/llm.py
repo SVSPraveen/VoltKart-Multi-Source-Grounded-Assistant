@@ -68,8 +68,11 @@ def _save_cache() -> None:
 
 
 def is_llm_available() -> bool:
-    """Check if a Gemini API key is configured in the environment."""
+    """Check if a Gemini API key or local Ollama instance is configured."""
     load_env_file()
+    provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if provider == "ollama":
+        return True
     key = os.getenv("GEMINI_API_KEY", "").strip()
     return bool(key and key != "your_gemini_api_key_here")
 
@@ -94,6 +97,7 @@ def generate_llm_response(
         Generated text or None if offline/unavailable.
     """
     load_env_file()
+    provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     active_model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
 
@@ -102,6 +106,31 @@ def generate_llm_response(
     cache_key = _get_cache_key(active_model, prompt, system_prompt, temperature)
     if cache_key in _DEV_CACHE:
         return _DEV_CACHE[cache_key]
+
+    # 2. Local Ollama generation
+    if provider == "ollama":
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+        ollama_model = model or os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+        full_prompt = f"SYSTEM: {system_prompt}\n\nUSER: {prompt}" if system_prompt else prompt
+        payload = {
+            "model": ollama_model,
+            "prompt": full_prompt,
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+        for attempt in range(max_retries):
+            try:
+                with httpx.Client(timeout=60.0) as client:
+                    resp = client.post(f"{ollama_base}/api/generate", json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        text = data.get("response", "")
+                        _DEV_CACHE[cache_key] = text
+                        _save_cache()
+                        return text
+            except Exception:
+                time.sleep(2**attempt)
+        return None
 
     if not api_key or api_key == "your_gemini_api_key_here":
         return None

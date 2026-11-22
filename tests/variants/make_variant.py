@@ -9,6 +9,7 @@ hardcoded entities, specific dates, or fixed numbers (REVIEW.md R-005, R-018).
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 from datetime import datetime, timedelta
@@ -139,16 +140,28 @@ def generate_variant(
             if not doc_file.is_file():
                 continue
 
-            # Compute variant output filename
+            # Compute variant output filename (brand replacement and date shift)
             new_filename = doc_file.name.replace("VoltKart", brand_name).replace(
                 "VoltCare", warranty_name
             )
+            if shift_days != 0:
+                new_filename = re.sub(
+                    r"(\d{4}-\d{2}-\d{2})",
+                    lambda m: shift_date_str(m.group(1), shift_days),
+                    new_filename,
+                )
             out_file = docs_out / new_filename
 
             if doc_file.suffix.lower() == ".txt":
                 content = doc_file.read_text(encoding="utf-8", errors="replace")
                 content = content.replace("VoltKart", brand_name)
                 content = content.replace("VoltCare", warranty_name)
+                if shift_days != 0:
+                    content = re.sub(
+                        r"(\d{4}-\d{2}-\d{2})",
+                        lambda m: shift_date_str(m.group(1), shift_days),
+                        content,
+                    )
                 out_file.write_text(content, encoding="utf-8")
                 transform_log["documents_modified"].append(new_filename)
             else:
@@ -161,6 +174,12 @@ def generate_variant(
     if dict_in.exists():
         dict_text = dict_in.read_text(encoding="utf-8", errors="replace")
         dict_text = dict_text.replace("VoltKart", brand_name)
+        if shift_days != 0:
+            dict_text = re.sub(
+                r"(\d{4}-\d{2}-\d{2})",
+                lambda m: shift_date_str(m.group(1), shift_days),
+                dict_text,
+            )
         (output_dir / "DATA_DICTIONARY.md").write_text(dict_text, encoding="utf-8")
 
     return transform_log

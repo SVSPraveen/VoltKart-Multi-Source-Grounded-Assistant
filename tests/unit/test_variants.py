@@ -48,3 +48,37 @@ def test_generate_variant_minimal(tmp_path: Path):
     doc_content = (out / "documents" / "ApexRetail_Return_Policy_2025.txt").read_text()
     assert "ApexRetail" in doc_content
     assert "VoltKart" not in doc_content
+
+
+def test_generate_variant_date_shift(tmp_path: Path):
+    src = tmp_path / "src"
+    src_tables = src / "tables"
+    src_docs = src / "documents"
+    src_tables.mkdir(parents=True)
+    src_docs.mkdir(parents=True)
+
+    df_orders = pd.DataFrame([{"order_id": "O001", "store_id": "S01", "order_date": "2025-01-15"}])
+    df_orders.to_csv(src_tables / "orders.csv", index=False)
+
+    (src_docs / "VoltKart_Return_Policy_2025-01-15.txt").write_text(
+        "Effective 2025-01-15 at VoltKart stores."
+    )
+
+    out = tmp_path / "out"
+    generate_variant(
+        source_dir=src,
+        output_dir=out,
+        brand_name="NovaMart",
+        shift_days=10,
+    )
+
+    # Check order date shifted
+    out_orders = pd.read_csv(out / "tables" / "orders.csv")
+    assert out_orders["order_date"].iloc[0] == "2025-01-25"
+
+    # Check document filename and content shifted
+    assert (out / "documents" / "NovaMart_Return_Policy_2025-01-25.txt").exists()
+    doc_text = (out / "documents" / "NovaMart_Return_Policy_2025-01-25.txt").read_text()
+    assert "2025-01-25" in doc_text
+    assert "2025-01-15" not in doc_text
+    assert "NovaMart" in doc_text

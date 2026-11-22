@@ -80,21 +80,21 @@
 
 ### Section 4: Document Q&A & Deterministic Version Resolver (7:30 – 10:00)
 - **Visual**: Switch to a new chat conversation using `+ New`. Type policy question.
-- **Demo Query 3 (Version Fallback)**:
-  > *"How soon must a customer report a product damaged on delivery according to our return policy?"*
+- **Demo Query 3 (Version Fallback & Superseded Tracking)**:
+  > *"How are orders paid in cash refunded under the return policy?"*
 - **Spoken Audio**:
-  > *"Now we arrive at the heart of the project: deterministic document version resolution.*
+  > *"Now we arrive at the heart of the project: deterministic document version resolution across dated policies.*
   >
-  > *Our library contains three versions of the Return Policy: April 2024 (v1.0), January 2025 (v2.0), and September 2025 (v3.0).*
-  > *The rule requiring customers to report damaged items within 48 hours was defined in the April 2024 policy. The subsequent 2025 revisions omitted this clause for brevity without superseding it.*
+  > *Our files library contains three successive versions of the Return Policy: April 2024 (v1.0), January 2025 (v2.0), and September 2025 (v3.0).*
+  > *In April 2024, cash refunds were issued as store credit. In January 2025 (v2.0, Section 3), policy updated cash refunds to bank transfer via UPI. In the latest September 2025 (v3.0) revision, the section was consolidated and omits cash refund methods entirely.*
   >
-  > *A naive RAG system filtering to the September 2025 document would fail and say 'not found'. Watch what VoltKart does:*
+  > *A naive RAG system filtering to the newest September 2025 document would fail and claim 'not found', while an unranked retriever might pull the obsolete 2024 store credit rule. Watch what VoltKart does:*
   >
   > *[Action: Send query]*
   >
-  > *The assistant responds: 'According to the Return Policy dated 2024-04-01 (v1.0, Section 4), a customer must report a product damaged on delivery within 48 hours, providing photographs of the product and packaging. Note: Subsequent revisions (2025-01-15 and 2025-09-01) do not mention this reporting window.'*
+  > *The assistant responds: 'According to the Return Policy dated 2025-01-15 (v2.0, Section 3), orders paid in cash are refunded by bank transfer (UPI) instead of store credit. Note: The newest revision (2025-09-01, v3.0) does not mention cash refund methods, and this supersedes the 2024-04-01 policy which issued store credit.'*
   >
-  > *Let's open the Evidence Drawer. It shows our version timeline: v1.0 answered, while v2.0 and v3.0 are marked as silent. The verbatim quote is machine-verified against stored text."*
+  > *Let's open the Evidence Drawer. It shows our version timeline: v2.0 answered, v3.0 is flagged as silent (triggering mandatory fallback disclosure), and v1.0 is tracked as superseded. The verbatim quote is machine-verified against stored text."*
 
 ---
 

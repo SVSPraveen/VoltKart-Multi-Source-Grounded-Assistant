@@ -17,17 +17,16 @@
 
 ## Table of Contents
 1. [Key Architecture Principles](#key-architecture-principles)
-2. [Explainer Video & Presentation Guide](#explainer-video--presentation-guide)
-3. [Architecture Overview & Data Flow](#architecture-overview--data-flow)
-4. [Live Demo Highlights](#live-demo-highlights)
-5. [Traceability Matrix (C1–C7 & B8–B10)](#traceability-matrix-c1c7--b8b10)
-6. [What They Asked For vs. What We Built More](#what-they-asked-for-vs-what-we-built-more)
-7. [Pre-Generated Evaluation PDF Bundle](#pre-generated-evaluation-pdf-bundle)
-8. [Verification & Test Suite](#verification--test-suite)
-9. [Quickstart & Installation](#quickstart--installation)
-10. [Documentation Roadmap](#documentation-roadmap)
-11. [Known Limitations & Future Improvements](#known-limitations--future-improvements)
-12. [Security & Privacy Guarantees](#security--privacy-guarantees)
+2. [Architecture Overview & Data Flow](#architecture-overview--data-flow)
+3. [Live Demo Highlights](#live-demo-highlights)
+4. [Traceability Matrix (C1–C7 & B8–B10)](#traceability-matrix-c1c7--b8b10)
+5. [What They Asked For vs. What We Built More](#what-they-asked-for-vs-what-we-built-more)
+6. [Pre-Generated Evaluation PDF Bundle](#pre-generated-evaluation-pdf-bundle)
+7. [Verification & Test Suite](#verification--test-suite)
+8. [Quickstart & Installation](#quickstart--installation)
+9. [Documentation Roadmap](#documentation-roadmap)
+10. [Known Limitations & Future Improvements](#known-limitations--future-improvements)
+11. [Security & Privacy Guarantees](#security--privacy-guarantees)
 
 ---
 
@@ -56,21 +55,6 @@ To eliminate these failure modes, VoltKart is built upon **five non-negotiable t
 5. **Zero Domain-Specific Hardcoding**:
    - Application code in `backend/` and `frontend/src/` contains zero hardcoded store IDs, customer names, product categories, or document titles.
    - Enforced by automated AST scans (`scripts/check_no_hardcode.py`) and verified against multi-variant synthetic company datasets (`tests/variants/`).
-
----
-
-## Explainer Video & Presentation Guide
-
-A complete, production-grade 10–14 minute master presentation script and live cue sheet is available in:  
-📄 **[`docs/EXPLAINER_VIDEO_MASTER.md`](docs/EXPLAINER_VIDEO_MASTER.md)**
-
-### Presentation Structure
-1. **Introduction & Engineering Motivation**: Personal introduction (Praveen), background in backend systems & production AI architectures, problem statement, and the 5 non-negotiable truth invariants.
-2. **Live Walkthrough in One Continuous Take**: Starting from an empty app with zero files $\rightarrow$ Uploading 6 CSV tables and 8 documents $\rightarrow$ Reviewing Ingestion Card $\rightarrow$ Relational Table QA with executed SQL $\rightarrow$ Inline SVG Chart $\rightarrow$ `+ New Chat` header action & automatic question titling $\rightarrow$ Multi-version policy fallback resolution $\rightarrow$ Server-gated web search toggle $\rightarrow$ Publication-grade PDF export.
-3. **Architecture Walkthrough**: Following query lifecycle from UI through SSE, Contextualizer, Router, Dual Engines, Grounding Validator, to ReportLab PDF.
-4. **Deep Code Walkthrough**: Inspecting `backend/sql_sandbox.py`, `backend/version_resolver.py`, `backend/storage.py`, and `backend/export_pdf.py`.
-5. **Design Decision & Rejected Alternative**: Deterministic code-level claim resolution vs retrieval-time date filtering / prompt reconciliation.
-6. **Failure Modes & Known Limitations**: Real failure example (unnormalized categorical slang returning 0 rows), mitigation, and 7-layer verification proof.
 
 ---
 
@@ -311,7 +295,6 @@ Open your browser at **`http://localhost:5173/`** (or `http://127.0.0.1:8000`).
 
 - 📐 **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**: Deep dive into the multi-source pipeline, SSE lifecycle, dual-engine storage model, layered SQL AST sandbox, deterministic version resolver, and ReportLab PDF engine.
 - 🛡️ **[`docs/EXPLAIN_ME.md`](docs/EXPLAIN_ME.md)**: Module-by-module defense manual for the live technical interview covering pipeline roles, design rationale, rejected alternatives, and 3 hard interview questions per module with verified technical answers.
-- 🎬 **[`docs/EXPLAINER_VIDEO_MASTER.md`](docs/EXPLAINER_VIDEO_MASTER.md)**: Timed 10–14 minute master script, teleprompter cue sheet, pre-recording setup, and exact copy-paste queries.
 - ⚠️ **[`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md)**: Detailed root-cause analysis and architectural mitigations for 3 real reproduced edge cases.
 - 📊 **[`docs/PROGRESS.md`](docs/PROGRESS.md)**: Complete chronological development record from Phase 0 to Phase 8 Release.
 - 📋 **[`docs/SPEC.md`](docs/SPEC.md)**: The original formal engineering specification.

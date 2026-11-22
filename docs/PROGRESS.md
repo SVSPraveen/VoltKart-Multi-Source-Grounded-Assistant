@@ -15,11 +15,11 @@
   - Deterministic Claim-Level Resolver (`backend/version_resolver.py`): Picks the latest document date among versions stating the fact, tracks superseded values, detects tie dates, handles temporal `as_of` dates (A3, A4), and honestly abstains when unsupported (A1, A2).
   - Fallback Disclosure: Sets `fallback_used = True`, records newer silent versions, and explicitly states the source version in prose and citations (Q8, Q9, Q11, Q12).
   - Prompt Injection Immunity: Document chunks wrapped in `<document_data>` and treated strictly as untrusted data, never instructions (Truth Rule 5, R-010).
-  - Unit Test Suite (`tests/unit/test_version_resolver.py`): 10 dedicated tests on synthetic families covering newest silent, newest stating, tie dates, undated documents (R-017), three versions with changed facts, prompt injection fixtures, quote verification, and point-in-time as-of queries. Total unit suite: 110 tests passing.
+  - Unit Test Suite (`tests/unit/test_version_resolver.py`): 11 dedicated tests on synthetic families covering newest silent, newest stating, tie dates (conflict & agree), undated documents (R-017), three versions with changed facts, prompt injection fixtures, quote verification, and point-in-time as-of queries. Total unit suite: 111 tests passing.
   - Live Golden Evaluations Q6-Q12: 3 live runs each, 21/21 PASS (100% pass rate) with exact version statements, verbatim quotes, and evidence drawer provenance.
   - Adversarial Probes A1-A5: 5/5 PASS (Diamond tier abstention, CEO abstention, March 2024 out of coverage, mid-2025 as-of 20 days / 2025-01-15 resolution, and prompt override refusal).
   - Zero hardcoding gate: `make no-hardcode` passes cleanly across all 18 files.
-  - Rules `R-043`, `R-044`, and `R-045` recorded in `REVIEW.md`.
+  - Rules `R-043`, `R-044`, `R-045`, `R-046`, `R-047`, and `R-048` recorded in `REVIEW.md`.
 
 ### 2. In Progress
 - [ ] Phase 4 Gate Report submission and owner review.

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,20 @@ from backend.storage import (
     list_chats,
     reset_storage,
 )
+
+
+def validate_chat_id(chat_id: str) -> str:
+    """Validate and sanitize chat_id to prevent injection and header manipulation."""
+    if not chat_id or not re.match(r"^[a-zA-Z0-9_\-\.]{1,64}$", chat_id):
+        raise HTTPException(status_code=400, detail="Invalid chat_id format")
+    return chat_id
+
+
+def validate_sha256(sha256: str) -> str:
+    """Validate SHA-256 hash format."""
+    if not sha256 or not re.match(r"^[a-fA-F0-9]{64}$", sha256):
+        raise HTTPException(status_code=400, detail="Invalid SHA-256 hash format")
+    return sha256.lower()
 
 
 class QueryRequest(BaseModel):
@@ -112,9 +127,10 @@ def get_schema_card() -> dict[str, str]:
 @router.post("/query")
 def process_query(request: QueryRequest) -> dict[str, Any]:
     """Execute multi-source question answering pipeline."""
+    clean_id = validate_chat_id(request.chat_id)
     return ask_assistant(
         question=request.question,
-        chat_id=request.chat_id,
+        chat_id=clean_id,
         web_enabled=request.web_enabled,
     )
 
@@ -135,10 +151,11 @@ def get_all_files_endpoint() -> list[dict[str, Any]]:
 @router.delete("/files/{sha256}")
 def delete_file_endpoint(sha256: str) -> dict[str, str]:
     """Delete an ingested file by its SHA-256 hash."""
-    success = delete_file_by_sha256(sha256)
+    clean_sha = validate_sha256(sha256)
+    success = delete_file_by_sha256(clean_sha)
     if not success:
         raise HTTPException(status_code=404, detail="File not found")
-    return {"status": "deleted", "sha256": sha256}
+    return {"status": "deleted", "sha256": clean_sha}
 
 
 @router.get("/chats", response_model=list[ChatSession])
@@ -158,7 +175,8 @@ def create_chat_endpoint(request: ChatCreateRequest | None = None) -> dict[str, 
 @router.get("/chats/{chat_id}", response_model=ChatSession)
 def get_chat_endpoint(chat_id: str) -> dict[str, Any]:
     """Get metadata for a specific chat."""
-    info = get_chat(chat_id)
+    clean_id = validate_chat_id(chat_id)
+    info = get_chat(clean_id)
     if not info:
         raise HTTPException(status_code=404, detail="Chat not found")
     return info
@@ -167,10 +185,11 @@ def get_chat_endpoint(chat_id: str) -> dict[str, Any]:
 @router.delete("/chats/{chat_id}")
 def delete_chat_endpoint(chat_id: str) -> dict[str, str]:
     """Delete a chat and its message history."""
-    success = delete_chat(chat_id)
+    clean_id = validate_chat_id(chat_id)
+    success = delete_chat(clean_id)
     if not success:
         raise HTTPException(status_code=404, detail="Chat not found")
-    return {"status": "deleted", "chat_id": chat_id}
+    return {"status": "deleted", "chat_id": clean_id}
 
 
 @router.post("/chats/{chat_id}/messages")
@@ -180,6 +199,7 @@ async def send_message_stream(chat_id: str, request: MessageCreateRequest):
     Streams live pipeline status events during reasoning and verification,
     followed by the final grounded answer and structured citations.
     """
+    clean_id = validate_chat_id(chat_id)
 
     async def event_generator():
         try:
@@ -198,7 +218,7 @@ async def send_message_stream(chat_id: str, request: MessageCreateRequest):
             # Execute multi-source QA pipeline
             response = ask_assistant(
                 question=request.content,
-                chat_id=chat_id,
+                chat_id=clean_id,
                 web_enabled=request.web_enabled,
             )
 
@@ -226,7 +246,7 @@ async def send_message_stream(chat_id: str, request: MessageCreateRequest):
             yield f"event: answer\ndata: {json.dumps(answer_payload)}\n\n"
 
             # 6. Stream done event
-            yield f"event: done\ndata: {json.dumps({'status': 'completed', 'chat_id': chat_id})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'status': 'completed', 'chat_id': clean_id})}\n\n"
 
         except Exception as exc:
             yield f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n"
@@ -245,12 +265,13 @@ async def send_message_stream(chat_id: str, request: MessageCreateRequest):
 @router.get("/chats/{chat_id}/export.pdf")
 def export_chat_pdf_endpoint(chat_id: str):
     """Export conversation history as an auditable PDF document with embedded ₹ font (C7, ADR-006)."""
-    pdf_bytes = generate_chat_pdf(chat_id)
+    clean_id = validate_chat_id(chat_id)
+    pdf_bytes = generate_chat_pdf(clean_id)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="chat_{chat_id}_export.pdf"',
+            "Content-Disposition": f'attachment; filename="chat_{clean_id}_export.pdf"',
         },
     )
 
@@ -258,8 +279,9 @@ def export_chat_pdf_endpoint(chat_id: str):
 @router.get("/chats/{chat_id}/messages")
 def get_messages(chat_id: str) -> dict[str, Any]:
     """Retrieve message history for a specific chat."""
-    msgs = get_chat_messages(chat_id)
-    return {"chat_id": chat_id, "messages": msgs}
+    clean_id = validate_chat_id(chat_id)
+    msgs = get_chat_messages(clean_id)
+    return {"chat_id": clean_id, "messages": msgs}
 
 
 @router.post("/reset")

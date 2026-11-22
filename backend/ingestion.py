@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,8 +64,16 @@ register_reset_callback(_clear_in_memory_cache)
 
 
 def sanitize_filename(raw_filename: str) -> str:
-    """Sanitize filename to prevent directory traversal attacks (R-023)."""
-    return Path(raw_filename).name.strip()
+    """Sanitize filename to prevent cross-platform directory traversal attacks (R-023)."""
+    # Remove null bytes and control chars
+    clean = re.sub(r"[\x00-\x1f\x7f]", "", raw_filename)
+    # Normalize path separators across OS
+    clean = clean.replace("\\", "/")
+    # Extract only the base filename
+    base_name = clean.split("/")[-1].strip()
+    # Strip dangerous characters
+    base_name = re.sub(r'["\'<>|?*:]', "", base_name)
+    return base_name or "uploaded_file"
 
 
 def validate_file_content(filename: str, content: bytes) -> None:

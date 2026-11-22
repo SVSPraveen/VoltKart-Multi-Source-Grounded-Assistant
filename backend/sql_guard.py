@@ -195,10 +195,13 @@ def validate_sql(
             if fname and (
                 fname in FORBIDDEN_FUNCTIONS
                 or fname.replace("_", "") in {f.replace("_", "") for f in FORBIDDEN_FUNCTIONS}
+                or fname.startswith("duckdb_")
+                or fname.startswith("sqlite_")
+                or fname.startswith("pg_")
             ):
                 return SQLValidationResult(
                     is_valid=False,
-                    error_message=f"Unauthorized function call '{fname}': external access is blocked by sandbox policy.",
+                    error_message=f"Unauthorized function call '{fname}': internal introspection and external access are blocked by sandbox policy.",
                 )
 
     # 3. Ensure root statement is in the SELECT family
@@ -211,10 +214,15 @@ def validate_sql(
     # 4. Check for forbidden file / network / system functions in expressions
     for func in parsed_expr.find_all((exp.Anonymous, exp.Func)):
         fname = func.name.lower() if hasattr(func, "name") and func.name else ""
-        if fname in FORBIDDEN_FUNCTIONS:
+        if (
+            fname in FORBIDDEN_FUNCTIONS
+            or fname.startswith("duckdb_")
+            or fname.startswith("sqlite_")
+            or fname.startswith("pg_")
+        ):
             return SQLValidationResult(
                 is_valid=False,
-                error_message=f"Unauthorized function call '{fname}': external file and network access is blocked by sandbox policy.",
+                error_message=f"Unauthorized function call '{fname}': internal introspection, external file, and network access are blocked by sandbox policy.",
             )
 
     # 5. Extract referenced tables and validate against allowed_tables if provided

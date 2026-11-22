@@ -21,6 +21,21 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
   const maxY = Math.max(...data_points.map((p) => p.y), 1.0);
   const minY = Math.min(...data_points.map((p) => p.y), 0.0);
   const rangeY = maxY - minY || 1.0;
+  const totalY = data_points.reduce((acc, p) => acc + p.y, 0) || 1.0;
+
+  const PIE_COLORS = [
+    'var(--color-primary, #0F766E)',
+    '#2DD4BF',
+    'var(--accent-volt, #D4E815)',
+    '#F59E0B',
+    '#6366F1',
+    '#EC4899',
+    '#0EA5E9',
+  ];
+
+  const pieCx = 150;
+  const pieCy = svgHeight / 2;
+  const pieRadius = 80;
 
   // Format currency/number helper
   const formatVal = (v: number) => {
@@ -68,34 +83,35 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           style={{ width: '100%', maxWidth: `${svgWidth}px`, height: 'auto', display: 'block' }}
         >
-          {/* Y Axis Grid lines and Labels */}
-          {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
-            const yPos = padding.top + chartHeight - ratio * chartHeight;
-            const val = minY + ratio * rangeY;
-            return (
-              <g key={idx}>
-                <line
-                  x1={padding.left}
-                  y1={yPos}
-                  x2={svgWidth - padding.right}
-                  y2={yPos}
-                  stroke="var(--border-subtle)"
-                  strokeDasharray={ratio === 0 ? 'none' : '3 3'}
-                  strokeWidth="1"
-                />
-                <text
-                  x={padding.left - 8}
-                  y={yPos + 4}
-                  textAnchor="end"
-                  fontSize="10"
-                  fill="var(--text-muted)"
-                  fontFamily="monospace"
-                >
-                  {formatVal(val)}
-                </text>
-              </g>
-            );
-          })}
+          {/* Cartesian Y Axis Grid lines and Labels (bar / line charts only) */}
+          {chart_type !== 'pie' &&
+            [0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+              const yPos = padding.top + chartHeight - ratio * chartHeight;
+              const val = minY + ratio * rangeY;
+              return (
+                <g key={idx}>
+                  <line
+                    x1={padding.left}
+                    y1={yPos}
+                    x2={svgWidth - padding.right}
+                    y2={yPos}
+                    stroke="var(--border-subtle)"
+                    strokeDasharray={ratio === 0 ? 'none' : '3 3'}
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={padding.left - 8}
+                    y={yPos + 4}
+                    textAnchor="end"
+                    fontSize="10"
+                    fill="var(--text-muted)"
+                    fontFamily="monospace"
+                  >
+                    {formatVal(val)}
+                  </text>
+                </g>
+              );
+            })}
 
           {/* Bar Chart rendering */}
           {chart_type === 'bar' && (
@@ -177,26 +193,103 @@ export const InlineChart: React.FC<InlineChartProps> = ({ chart }) => {
             </g>
           )}
 
-          {/* X & Y Axis titles */}
-          <text
-            x={padding.left}
-            y={padding.top - 12}
-            fontSize="10"
-            fill="var(--text-muted)"
-            fontWeight="500"
-          >
-            {y_label}
-          </text>
-          <text
-            x={svgWidth / 2}
-            y={svgHeight - 10}
-            fontSize="10"
-            textAnchor="middle"
-            fill="var(--text-muted)"
-            fontWeight="500"
-          >
-            {x_label}
-          </text>
+          {/* Pie Chart rendering */}
+          {chart_type === 'pie' && (
+            <g>
+              {(() => {
+                let accumulatedAngle = -Math.PI / 2; // start from 12 o'clock
+                return data_points.map((p, i) => {
+                  const sliceAngle = (p.y / totalY) * 2 * Math.PI;
+                  const startAngle = accumulatedAngle;
+                  const endAngle = accumulatedAngle + sliceAngle;
+                  accumulatedAngle = endAngle;
+
+                  const color = PIE_COLORS[i % PIE_COLORS.length];
+
+                  // Full circle if 1 slice
+                  if (data_points.length === 1 || sliceAngle >= 2 * Math.PI - 0.001) {
+                    return (
+                      <circle
+                        key={i}
+                        cx={pieCx}
+                        cy={pieCy}
+                        r={pieRadius}
+                        fill={color}
+                        stroke="var(--border-subtle)"
+                        strokeWidth="1"
+                      />
+                    );
+                  }
+
+                  const x1 = pieCx + pieRadius * Math.cos(startAngle);
+                  const y1 = pieCy + pieRadius * Math.sin(startAngle);
+                  const x2 = pieCx + pieRadius * Math.cos(endAngle);
+                  const y2 = pieCy + pieRadius * Math.sin(endAngle);
+                  const largeArc = sliceAngle > Math.PI ? 1 : 0;
+                  const pathData = `M ${pieCx} ${pieCy} L ${x1} ${y1} A ${pieRadius} ${pieRadius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+                  return (
+                    <path
+                      key={i}
+                      d={pathData}
+                      fill={color}
+                      stroke="var(--border-subtle)"
+                      strokeWidth="1"
+                    />
+                  );
+                });
+              })()}
+
+              {/* Pie Chart Legend */}
+              <g transform="translate(280, 24)">
+                {data_points.map((p, i) => {
+                  const color = PIE_COLORS[i % PIE_COLORS.length];
+                  const pct = ((p.y / totalY) * 100).toFixed(1);
+                  const yOffset = i * 22;
+                  if (yOffset > svgHeight - 50) return null;
+                  return (
+                    <g key={i} transform={`translate(0, ${yOffset})`}>
+                      <rect width="10" height="10" rx="2" fill={color} />
+                      <text
+                        x="18"
+                        y="9"
+                        fontSize="10.5"
+                        fill="var(--text-primary)"
+                        fontFamily="monospace"
+                      >
+                        {p.x.length > 15 ? `${p.x.slice(0, 14)}…` : p.x}: {formatVal(p.y)} ({pct}%)
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            </g>
+          )}
+
+          {/* X & Y Axis titles (Cartesian charts only) */}
+          {chart_type !== 'pie' && (
+            <>
+              <text
+                x={padding.left}
+                y={padding.top - 12}
+                fontSize="10"
+                fill="var(--text-muted)"
+                fontWeight="500"
+              >
+                {y_label}
+              </text>
+              <text
+                x={svgWidth / 2}
+                y={svgHeight - 10}
+                fontSize="10"
+                textAnchor="middle"
+                fill="var(--text-muted)"
+                fontWeight="500"
+              >
+                {x_label}
+              </text>
+            </>
+          )}
         </svg>
       </div>
 

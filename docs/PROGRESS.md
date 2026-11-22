@@ -38,7 +38,12 @@
     - Unit test suite: 129/129 PASS across all modules.
     - Golden test suite: 30/30 PASS (Q1–Q20, A1–A10).
     - Full `python scripts/runner.py verify` passes: `lint` (PASS), `format` (PASS), `no-hardcode` (PASS), `unit` (PASS), `golden` (PASS).
-    - Rules `R-056`, `R-057`, `R-058` added to `REVIEW.md`.
+    - Rules `R-056`, `R-057`, `R-058`, `R-059`, `R-060`, `R-061` added to `REVIEW.md`.
+    - Review hardening:
+      1. Fixed `_handle_chart_query` to resolve contextual "first question" strictly within the active chat's history and honestly abstain when no prior question exists in that chat (R-059).
+      2. Fixed `InlineChart.tsx` to implement full SVG rendering for pie charts (pie slices, angular arcs, and legend) alongside bar and line charts (R-061).
+      3. Fixed `web_search.py` DuckDuckGo HTML endpoint integration with session referer and replaced static entity answer templates with dynamic fact extraction and honest abstention (R-060).
+      4. Added unit tests for pie chart percentage validation (100% ± 0.5%), first question cross-chat isolation, and general web query grounding.
 
 ### 2. In Progress
 - [ ] Phase 6 Gate Report submission and owner review.

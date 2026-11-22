@@ -391,5 +391,23 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Enforce server-side gating in `backend/web_search.py` and `backend/assistant.py` that halts execution before tool invocation and verifies zero outbound network calls are made when web search is disabled.
 - Check: Unit test `test_q17_web_off_assert_zero_outbound_calls` in `tests/unit/test_web_search.py`.
 
+### R-059 — Contextual chat referents ("first question", "previous query") must resolve strictly within the active chat_id history
+- Status: observed (Phase 6 Review, 2026-11-22)
+- Context: `_handle_chart_query` initially hardcoded "first question" queries to run the store revenue query (Q19) regardless of the current chat's actual history, causing fresh chats with no prior turns or chats starting with other questions (e.g. region refunds) to emit incorrect charts instead of honestly declining.
+- Rule: Look up the actual prior user questions within the specific `chat_id` session history. If the referenced question does not exist in the active chat, abstain honestly with an explanation.
+- Check: Unit test `test_first_question_chart_cross_chat_isolation` in `tests/unit/test_chat_isolation.py`.
+
+### R-060 — Web question answering synthesis must be grounded in retrieved content and never fall back to static entity templates
+- Status: observed (Phase 6 Review, 2026-11-22)
+- Context: `run_web_qa` initially hardcoded an Amazon India smartphone return policy answer template for all web queries, causing non-Amazon queries (e.g. Apple or generic questions) to return Amazon smartphone answers with invented 7-day numbers even when ungrounded.
+- Rule: Web QA synthesis must extract facts dynamically from retrieved snippets/pages using LLM or structured claim extraction, cite the actual retrieved source, and honestly abstain when retrieved content does not contain the answer.
+- Check: Unit test `test_general_web_search_does_not_hallucinate_amazon_return_policy` in `tests/unit/test_web_search.py`.
+
+### R-061 — Frontend chart visualizers must maintain feature parity with all supported backend chart types (bar, line, pie)
+- Status: observed (Phase 6 Review, 2026-11-22)
+- Context: `InlineChart.tsx` only implemented SVG rendering for `bar` and `line` charts; when `chart_type === 'pie'` was received, it rendered an empty canvas with mismatched Cartesian Y-grid lines, breaking visual parity with backend PIL and ReportLab PDF exporters.
+- Rule: Frontend charting components must implement complete SVG rendering (pie slices, angular arcs, and legend) for every chart type specified in `types.ts`, and hide Cartesian axes when rendering non-Cartesian charts.
+- Check: Production build `npm run build --prefix frontend` and unit test `test_render_chart_images_for_all_types` in `tests/unit/test_chart_validation.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->
 

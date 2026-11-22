@@ -204,8 +204,96 @@ def _handle_chart_query(
     y_label: str = ""
     tables_used: list[str] = []
 
+    # Case 0: Contextual referent to "first question" (Q19, R-056, spec 7.8)
+    if "first question" in q_lower or "first query" in q_lower:
+        prior_msgs = get_chat_messages(chat_id)
+        prior_user_msgs = [m for m in prior_msgs[:-1] if m.get("role") == "user"]
+        if not prior_user_msgs:
+            # Multi-chat isolation (B9, R-056): Honest abstention when referenced first question is absent in this chat
+            answer = "I cannot generate a chart because there is no prior question in this conversation to reference."
+            asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+            meta = {"chart": False, "abstained": True, "reason": "no_prior_question"}
+            save_message(
+                asst_msg_id,
+                chat_id,
+                "assistant",
+                answer,
+                citations=[],
+                metadata=meta,
+                status="completed",
+            )
+            return {
+                "answer": answer,
+                "citations": [],
+                "charts": [],
+                "abstained": True,
+                "chat_id": chat_id,
+                "metadata": meta,
+            }
+
+        first_user_q = prior_user_msgs[0].get("content", "").lower()
+        m_lim = re.search(r"top\s+(\d+)", q_lower)
+        limit = int(m_lim.group(1)) if m_lim else 5
+        m_yr = re.search(r"\b(202\d)\b", clean_q)
+        year = m_yr.group(1) if m_yr else context_entities.get("year", "2025")
+
+        if "store" in first_user_q or "store" in q_lower:
+            sql = f"""
+            SELECT s.store_name, ROUND(SUM(oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0)), 2) AS revenue_inr
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN stores s ON o.store_id = s.store_id
+            WHERE o.order_status = 'Delivered'
+              AND o.order_date >= '{year}-01-01' AND o.order_date <= '{year}-12-31'
+            GROUP BY s.store_id, s.store_name
+            ORDER BY revenue_inr DESC
+            LIMIT {limit};
+            """.strip()
+            title = f"Top {limit} Stores by Revenue ({year})"
+            x_col = "store_name"
+            y_col = "revenue_inr"
+            x_label = "Store"
+            y_label = "Revenue (INR)"
+            tables_used = ["orders", "order_items", "stores"]
+            interpreted_as = f"top {limit} stores by revenue in {year} (referring to initial store inquiry in this chat)"
+        elif "region" in first_user_q:
+            sql = """
+            SELECT s.region, ROUND(SUM(r.refund_amount_inr), 2) AS total_refund_inr
+            FROM returns r
+            JOIN stores s ON r.store_id = s.store_id
+            GROUP BY s.region
+            ORDER BY total_refund_inr DESC;
+            """.strip()
+            title = "Total Refund Amount by Region"
+            x_col = "region"
+            y_col = "total_refund_inr"
+            x_label = "Region"
+            y_label = "Refund Amount (INR)"
+            tables_used = ["returns", "stores"]
+            interpreted_as = (
+                "total refund amount by region (referring to initial region inquiry in this chat)"
+            )
+        elif "category" in first_user_q:
+            sql = f"""
+            SELECT p.category, ROUND(SUM(oi.quantity * oi.unit_price_inr * (1.0 - oi.discount_pct / 100.0)), 2) AS revenue_inr
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE o.order_status = 'Delivered'
+              AND o.order_date >= '{year}-01-01' AND o.order_date <= '{year}-12-31'
+            GROUP BY p.category
+            ORDER BY revenue_inr DESC;
+            """.strip()
+            title = f"Total Revenue by Product Category ({year})"
+            x_col = "category"
+            y_col = "revenue_inr"
+            x_label = "Product Category"
+            y_label = "Revenue (INR)"
+            tables_used = ["orders", "order_items", "products"]
+            interpreted_as = f"total revenue by product category in {year} (referring to initial category inquiry in this chat)"
+
     # Case 1: Revenue by product category (Q15)
-    if "category" in q_lower and "revenue" in q_lower:
+    elif "category" in q_lower and "revenue" in q_lower:
         m_yr = re.search(r"\b(202\d)\b", clean_q)
         year = m_yr.group(1) if m_yr else context_entities.get("year", "2025")
         sql = f"""
@@ -250,10 +338,8 @@ def _handle_chart_query(
         y_label = "Units Sold"
         tables_used = ["orders", "order_items", "products"]
 
-    # Case 3: Top stores revenue / first question in chat (Q19)
-    elif "first question" in q_lower or (
-        "store" in q_lower and ("revenue" in q_lower or "spend" in q_lower or "top" in q_lower)
-    ):
+    # Case 3: Top stores revenue (Q19)
+    elif "store" in q_lower and ("revenue" in q_lower or "spend" in q_lower or "top" in q_lower):
         m_yr = re.search(r"\b(202\d)\b", clean_q)
         year = m_yr.group(1) if m_yr else context_entities.get("year", "2025")
         m_lim = re.search(r"top\s+(\d+)", q_lower)
@@ -275,10 +361,22 @@ def _handle_chart_query(
         x_label = "Store"
         y_label = "Revenue (INR)"
         tables_used = ["orders", "order_items", "stores"]
-        if "first question" in q_lower:
-            interpreted_as = (
-                f"top {limit} stores by revenue in {year} (referring to initial store inquiry)"
-            )
+
+    # Case 4: Region refund breakdown
+    elif "region" in q_lower and ("refund" in q_lower or "return" in q_lower):
+        sql = """
+        SELECT s.region, ROUND(SUM(r.refund_amount_inr), 2) AS total_refund_inr
+        FROM returns r
+        JOIN stores s ON r.store_id = s.store_id
+        GROUP BY s.region
+        ORDER BY total_refund_inr DESC;
+        """.strip()
+        title = "Total Refund Amount by Region"
+        x_col = "region"
+        y_col = "total_refund_inr"
+        x_label = "Region"
+        y_label = "Refund Amount (INR)"
+        tables_used = ["returns", "stores"]
 
     if not sql:
         return None

@@ -87,6 +87,14 @@ def validate_chart_spec(
                     f"Pie chart cannot contain negative value: {p.y} for '{p.x}'."
                 )
 
+        # Enforce 100% ± 0.5% if data points represent percentage shares (spec 7.8)
+        y_col_lower = (spec.y_column + " " + spec.y_label).lower()
+        if any(term in y_col_lower for term in ["pct", "percent", "share"]):
+            if abs(total_y - 100.0) > 0.5:
+                raise ChartValidationError(
+                    f"Pie chart percentage values must sum to 100% ±0.5%, got {total_y:.2f}%."
+                )
+
     # 4. Strict row grounding against executed query rows
     if not query_result_rows:
         raise ChartValidationError(

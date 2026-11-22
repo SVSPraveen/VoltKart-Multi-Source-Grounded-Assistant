@@ -126,3 +126,18 @@ def test_server_gate_direct_call_blocks_when_off():
     assert get_outbound_search_count() == 0
     assert qa_res.abstained is True
     assert "disabled" in qa_res.answer.lower()
+
+
+def test_general_web_search_does_not_hallucinate_amazon_return_policy():
+    """Non-Amazon queries must not fabricate or default to Amazon return policy answers."""
+    reset_outbound_search_count()
+    qa_res = run_web_qa(
+        "What is the official repair service for Apple iPhones in India?",
+        web_enabled=True,
+    )
+    assert get_outbound_search_count() > 0
+    # Must not default to Amazon India official policy
+    assert "amazon india's official return policy" not in qa_res.answer.lower()
+    if not qa_res.abstained:
+        assert len(qa_res.citations) >= 1
+        assert qa_res.citations[0]["type"] == "web"

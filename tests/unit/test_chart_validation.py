@@ -120,6 +120,42 @@ def test_pie_chart_parts_of_a_whole_constraint():
     assert "Pie chart cannot contain negative value" in str(exc_info.value)
 
 
+def test_pie_chart_percentage_sum_constraint():
+    """Pie charts with percentage values must sum to 100% ± 0.5% (spec 7.8)."""
+    # 1. Invalid percentage sum (e.g. 70% total != 100%)
+    invalid_pct_rows = [
+        {"tier": "Gold", "share_pct": 45.0},
+        {"tier": "Silver", "share_pct": 25.0},
+    ]
+    with pytest.raises(ChartValidationError) as exc_info:
+        create_grounded_chart_spec(
+            query_result_rows=invalid_pct_rows,
+            chart_type="pie",
+            title="Tier Share Breakdown",
+            x_column="tier",
+            y_column="share_pct",
+            x_label="Tier",
+            y_label="Share Percentage",
+        )
+    assert "must sum to 100% ±0.5%" in str(exc_info.value)
+
+    # 2. Valid percentage sum (e.g. 100% total)
+    valid_pct_rows = [
+        {"tier": "Gold", "share_pct": 60.0},
+        {"tier": "Silver", "share_pct": 40.0},
+    ]
+    valid_spec = create_grounded_chart_spec(
+        query_result_rows=valid_pct_rows,
+        chart_type="pie",
+        title="Tier Share Breakdown",
+        x_column="tier",
+        y_column="share_pct",
+        x_label="Tier",
+        y_label="Share Percentage",
+    )
+    assert validate_chart_spec(valid_spec, valid_pct_rows) is True
+
+
 def test_render_chart_images_for_all_types():
     """Verify PNG rendering succeeds and creates valid image buffers for bar, line, pie."""
     sample_rows = [

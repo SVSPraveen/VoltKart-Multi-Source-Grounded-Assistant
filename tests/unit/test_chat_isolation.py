@@ -133,3 +133,35 @@ def test_chat_lifecycle_deletion_isolation():
     assert len(get_chat_messages(chat_a)) == 0
     # Chat B must remain intact
     assert len(get_chat_messages(chat_b)) >= 2
+
+
+def test_first_question_chart_cross_chat_isolation():
+    """Contextual referent 'first question' in Chat B must not adopt Chat A's first question (B9, R-056)."""
+    chat_a = f"chat_A_{uuid.uuid4().hex[:6]}"
+    chat_b = f"chat_B_{uuid.uuid4().hex[:6]}"
+
+    # Turn 1 in Chat A: Establishes store revenue
+    t1_a = ask_assistant(
+        "Which store had the highest revenue in 2025, and who manages it?", chat_id=chat_a
+    )
+    assert t1_a["abstained"] is False
+
+    # Turn 1 in Chat B: Asks for 'first question' chart in a brand new chat with no prior questions
+    t1_b = ask_assistant(
+        "Show the result of my first question as a bar chart of the top 5 stores.", chat_id=chat_b
+    )
+    # Must honestly abstain because Chat B has no prior question!
+    assert t1_b["abstained"] is True
+    assert (
+        "no prior question" in t1_b["answer"].lower()
+        or "cannot generate a chart" in t1_b["answer"].lower()
+    )
+    assert len(t1_b.get("charts", [])) == 0
+
+    # Turn 2 in Chat A: Asks for 'first question' chart in Chat A (where Turn 1 exists)
+    t2_a = ask_assistant(
+        "Show the result of my first question as a bar chart of the top 5 stores.", chat_id=chat_a
+    )
+    assert t2_a["abstained"] is False
+    assert len(t2_a.get("charts", [])) == 1
+    assert t2_a["charts"][0]["chart_type"] == "bar"

@@ -193,4 +193,16 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Always inspect real table schemas (`PRAGMA table_info` or `df.columns`) rather than relying on natural language question phrasing or mental models.
 - Check: Ingestion profiling test asserts every column referenced in business logic exists in the loaded schema.
 
+### R-026 — Comprehensive regex patterns for entity hardcode gates
+- Status: observed (Phase 1, 2026-11-22)
+- Context: `scripts/check_no_hardcode.py` initially checked only a few hand-picked IDs (S01-S06, C0118, O00174) and missed S07, S08, store locations (Baner, Koramangala), and 7 store managers.
+- Rule: Hardcode scanners must cover all schema entities (all stores, managers, brands) and use structural regexes (`\bS0[1-8]\b`, `\bC0[01]\d{2}\b`, `\bO00\d{3}\b`, `\bI00\d{4}\b`, `\bR0\d{3}\b`) rather than sporadic samples.
+- Check: `scripts/check_no_hardcode.py` run via `make no-hardcode` and unit tested across all sample entity classes in `tests/unit/test_no_hardcode.py`.
+
+### R-027 — Generic numeric evaluation across ground truth specs
+- Status: observed (Phase 1, 2026-11-22)
+- Context: `tests/golden/eval_harness.py` initially only checked `revenue_inr`, `grand_total_inr`, and `by_region_inr`, ignoring all other numeric fields (`spend_inr`, `count`, `returns`, `units`, `in_store_total_inr`, `data_inr`).
+- Rule: Truth harnesses must recursively traverse expected ground truth structures to deterministically assert numeric tolerance across all numeric metrics without hardcoding question-specific field names.
+- Check: Unit test `test_extract_expected_numeric_values` in `tests/unit/test_eval_assertions.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->

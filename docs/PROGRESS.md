@@ -18,9 +18,10 @@
   - Sample entity hardcoding scanner implemented (`scripts/check_no_hardcode.py`, `make no-hardcode`) enforcing AGENTS.md Rule 4 and REVIEW.md R-005.
   - Variant dataset generator implemented (`tests/variants/make_variant.py`) supporting brand renaming, date shifting, price scaling, and presets.
   - Golden evaluation harness implemented (`tests/golden/eval_harness.py`, `tests/golden/test_golden.py`) with deterministic assertions: numeric tolerance 0.01, entities (`must_include`/`must_not`), citation provenance (table SQL, doc quotes), version disclosure, and abstention.
-  - Unit test suite established in `tests/unit/` (15 passing tests for eval assertions, scanner, and variants).
+  - Unit test suite established in `tests/unit/` (23 passing tests for eval assertions, scanner, and variants).
   - **RED BASELINE asserted**: running `pytest tests/golden/` executes against unpopulated skeleton and deterministically fails (30/30 failed with explicit assertion errors).
-  - Independent mathematical verification script (`scripts/verify_golden_numbers.py`) re-derives Q1, Q4, Q5 to the exact paisa (diff 0.000000).
+  - Independent mathematical verification script (`scripts/verify_golden_numbers.py`) re-derives Q1, Q2, Q3, Q4, Q5 to the exact paisa and count (diff 0.000000).
+  - Rules `R-025`, `R-026`, and `R-027` recorded in `REVIEW.md`.
   - Verification reports generated at `reports/verify-<timestamp>.md`.
   - Repository hygiene: `.gitignore`, `.env.example`, `pyproject.toml`, `requirements.txt`, and `README.md` configured.
 

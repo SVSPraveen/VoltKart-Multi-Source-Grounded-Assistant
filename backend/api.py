@@ -6,13 +6,20 @@ and ingestion summaries with graceful JSON error responses.
 
 from __future__ import annotations
 
+import asyncio
+import json
+import uuid
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, UploadFile
+from fastapi import APIRouter, FastAPI, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.assistant import ask_assistant
+from backend.export_pdf import generate_chat_pdf
 from backend.ingestion import (
     _LOADED_TABLES,
     _TABLE_PROFILES,
@@ -20,9 +27,24 @@ from backend.ingestion import (
     get_current_ingestion_summary,
     ingest_files,
 )
-from backend.models import IngestionSummary
+from backend.models import (
+    ChatCreateRequest,
+    ChatSession,
+    IngestionSummary,
+    MessageCreateRequest,
+)
 from backend.sql_sandbox import execute_sandboxed_query
-from backend.storage import get_chat_messages, init_sqlite_db, reset_storage
+from backend.storage import (
+    create_chat,
+    delete_chat,
+    delete_file_by_sha256,
+    get_chat,
+    get_chat_messages,
+    init_sqlite_db,
+    list_all_files,
+    list_chats,
+    reset_storage,
+)
 
 
 class QueryRequest(BaseModel):
@@ -104,6 +126,130 @@ def execute_sql(request: SQLExecuteRequest) -> dict[str, Any]:
     return result.to_dict()
 
 
+@router.get("/files")
+def get_all_files_endpoint() -> list[dict[str, Any]]:
+    """Retrieve all ingested file records and version metadata."""
+    return list_all_files()
+
+
+@router.delete("/files/{sha256}")
+def delete_file_endpoint(sha256: str) -> dict[str, str]:
+    """Delete an ingested file by its SHA-256 hash."""
+    success = delete_file_by_sha256(sha256)
+    if not success:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"status": "deleted", "sha256": sha256}
+
+
+@router.get("/chats", response_model=list[ChatSession])
+def list_chats_endpoint() -> list[dict[str, Any]]:
+    """List all chat sessions ordered by last activity."""
+    return list_chats()
+
+
+@router.post("/chats", response_model=ChatSession)
+def create_chat_endpoint(request: ChatCreateRequest | None = None) -> dict[str, Any]:
+    """Create a new chat conversation."""
+    new_chat_id = f"chat_{uuid.uuid4().hex[:8]}"
+    title = request.title if request and request.title else "New Chat"
+    return create_chat(new_chat_id, title=title)
+
+
+@router.get("/chats/{chat_id}", response_model=ChatSession)
+def get_chat_endpoint(chat_id: str) -> dict[str, Any]:
+    """Get metadata for a specific chat."""
+    info = get_chat(chat_id)
+    if not info:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return info
+
+
+@router.delete("/chats/{chat_id}")
+def delete_chat_endpoint(chat_id: str) -> dict[str, str]:
+    """Delete a chat and its message history."""
+    success = delete_chat(chat_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return {"status": "deleted", "chat_id": chat_id}
+
+
+@router.post("/chats/{chat_id}/messages")
+async def send_message_stream(chat_id: str, request: MessageCreateRequest):
+    """Server-Sent Events (SSE) streaming API for chat message generation (C1, ADR-005).
+
+    Streams live pipeline status events during reasoning and verification,
+    followed by the final grounded answer and structured citations.
+    """
+
+    async def event_generator():
+        try:
+            # 1. Pipeline status: Initializing retrieval and schema inspection
+            status1 = json.dumps({"status": "Searching documents and database schemas..."})
+            yield f"event: status\ndata: {status1}\n\n"
+            await asyncio.sleep(0.04)
+
+            # 2. Pipeline status: Tool execution
+            status2 = json.dumps(
+                {"status": "Executing analytical SQL and retrieving source chunks..."}
+            )
+            yield f"event: status\ndata: {status2}\n\n"
+            await asyncio.sleep(0.04)
+
+            # Execute multi-source QA pipeline
+            response = ask_assistant(
+                question=request.content,
+                chat_id=chat_id,
+                web_enabled=request.web_enabled,
+            )
+
+            # 3. Pipeline status: Verification
+            status3 = json.dumps({"status": "Verifying citations and numeric grounding..."})
+            yield f"event: status\ndata: {status3}\n\n"
+            await asyncio.sleep(0.04)
+
+            # 4. Stream verified citations
+            for cit in response.get("citations", []):
+                yield f"event: citation\ndata: {json.dumps(cit)}\n\n"
+
+            # 5. Stream verified answer content
+            answer_payload = {
+                "content": response.get("answer", ""),
+                "interpreted_as": response.get("interpreted_as"),
+                "abstained": response.get("abstained", False),
+                "citations": response.get("citations", []),
+            }
+            yield f"event: answer\ndata: {json.dumps(answer_payload)}\n\n"
+
+            # 6. Stream done event
+            yield f"event: done\ndata: {json.dumps({'status': 'completed', 'chat_id': chat_id})}\n\n"
+
+        except Exception as exc:
+            yield f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/chats/{chat_id}/export.pdf")
+def export_chat_pdf_endpoint(chat_id: str):
+    """Export conversation history as an auditable PDF document with embedded ₹ font (C7, ADR-006)."""
+    pdf_bytes = generate_chat_pdf(chat_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="chat_{chat_id}_export.pdf"',
+        },
+    )
+
+
 @router.get("/chats/{chat_id}/messages")
 def get_messages(chat_id: str) -> dict[str, Any]:
     """Retrieve message history for a specific chat."""
@@ -121,6 +267,11 @@ def reset_database() -> dict[str, str]:
 
 
 app.include_router(router)
+
+# Mount compiled frontend static build if present
+DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
 
 
 @app.on_event("startup")

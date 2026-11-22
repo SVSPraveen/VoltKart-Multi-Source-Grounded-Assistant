@@ -119,3 +119,14 @@ def test_table_qa_lowest_revenue_query():
     assert not res_bottom.abstained
     assert "lowest revenue" in res_bottom.answer.lower()
     assert "asc" in res_bottom.sql.lower()
+
+    # Test "lowest sales" / "least sales" variants (natural synonym expansion)
+    res_sales = run_table_qa("Which store had the lowest sales in 2025?")
+    assert not res_sales.abstained
+    assert "lowest revenue" in res_sales.answer.lower()
+    assert "asc" in res_sales.sql.lower()
+
+    res_least_sales = run_table_qa("Which store had the least sales in 2025?")
+    assert not res_least_sales.abstained
+    assert "lowest revenue" in res_least_sales.answer.lower()
+    assert "asc" in res_least_sales.sql.lower()

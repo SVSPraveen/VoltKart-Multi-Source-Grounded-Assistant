@@ -473,14 +473,20 @@ actually bites, change its status to `observed` and add the date and commit.
 
 ### R-072 — Information extractors matching ambiguous financial terms must enforce explicit domain qualifying tokens
 - Status: observed (Adversarial Bug Investigation, 2026-11-22)
-- Context: In `backend/doc_agent.py`, warranty pricing extraction triggered on the token "cost" or "price" alone without checking for warranty context, causing corporate finance questions regarding "company profit margin and lease costs" to match and return warranty pricing tiers.
-- Rule: Claim extractors targeting domain-specific structures (such as warranty plans or insurance tiers) must require explicit domain qualifying keywords (warranty, coverage, plan, care, protection) before extracting prices or percentage costs.
+- Context: In `backend/doc_agent.py`, warranty pricing extraction triggered on the token "cost" or "price" alone without checking for warranty context, causing corporate finance questions regarding "company profit margin and lease costs" or "customer care expenses" to match and return warranty pricing tiers.
+- Rule: Claim extractors targeting domain-specific structures (such as warranty plans or insurance tiers) must require explicit domain qualifying keywords (warranty, coverage, plan, care, protection) before extracting prices or percentage costs, while explicitly excluding general non-warranty care phrases (e.g. "customer care", "health care", "day care", "care about").
 - Check: Unit test `test_adv17_warranty_pricing_domain_guard` in `tests/unit/test_documents.py`.
 
 ### R-073 — Job specification and organizational claim extractors must validate query target role against document titles
 - Status: observed (Adversarial Bug Investigation, 2026-11-22)
-- Context: In `backend/doc_agent.py`, questions asking about "CEO compensation" or "Who does the CEO report to?" blindly extracted compensation and reporting manager lines from the Machine Learning Engineer job description.
-- Rule: Role and organizational specification extractors must extract and validate the user's targeted role against the document's role title, department, and synonyms, abstaining or continuing search if the roles conflict.
+- Context: In `backend/doc_agent.py`, questions asking about "CEO compensation", "salary of the CEO", or "Who does the CEO report to?" extracted compensation and reporting manager lines from the Machine Learning Engineer job description due to inverted regex precedence, unhandled possessives, and unconstrained token matching.
+- Rule: Role and organizational specification extractors must extract and validate the user's targeted role against the document's role title, department, and synonyms: (1) prepositional role patterns (`salary of/for the <role>`) must take precedence over modifier prefixes, (2) possessives (`'s`) must be stripped, (3) generic salary/location modifiers (`base`, `starting`, `total`, `job`, `office`) must not be parsed as role titles, and (4) conflicting executive roles (`ceo`, `cto`, `cfo`, `director`, `vp`) must explicitly cause chunk rejection.
 - Check: Unit test `test_adv18_job_description_role_guard` in `tests/unit/test_documents.py`.
+
+### R-074 — External competitor query gating must use whole-word boundaries and exclude internal business metric homonyms
+- Status: observed (Adversarial Bug Investigation, 2026-11-22)
+- Context: In `backend/assistant.py`, naive substring matching for competitor names caused internal corporate analytical questions such as "What was our target revenue in 2025?" or "Who is our best buyer?" to be blocked with "web search is disabled" because of the retailer "Target" and "Best Buy".
+- Rule: External gating checks must enforce regex word boundaries (e.g. `\bbest\s+buy\b`), and retailers with common English metric homonyms (such as "Target") must only match when retailer-qualifying tokens are present (`at Target`, `Target stores`, `Target policy`), never on business performance phrases (`target revenue`, `sales target`, `target margin`).
+- Check: Unit test `test_generalized_competitor_gating_when_web_off` in `tests/unit/test_web_search.py`.
 
 

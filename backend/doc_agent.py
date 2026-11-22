@@ -157,32 +157,40 @@ def _chunk_matches_query_role(q_lower: str, content: str) -> bool:
     if dept_m:
         doc_tokens.update(re.findall(r"\b[a-zA-Z]+\b", dept_m.group(1).lower()))
 
-    # Extract target role from query
+    # Normalize possessives in question (e.g. "engineer's" -> "engineer", "ceo's" -> "ceo")
+    norm_q = re.sub(r"['’]s\b", "", q_lower)
+
+    # 1. Target role after "for / of (the) <role> (role / position / job)"
     target_role = None
     m = re.search(
         r"(?:for|of)\s+(?:the\s+)?([A-Za-z\s]+?)\s+(?:role|position|job)\b",
-        q_lower,
+        norm_q,
     )
     if m:
         target_role = m.group(1).strip()
     else:
+        # 2. Target role in "who does (the) <role> report to"
         m = re.search(
             r"(?:who does|who do)\s+(?:the\s+)?([A-Za-z\s]+?)\s+report to",
-            q_lower,
+            norm_q,
         )
         if m:
             target_role = m.group(1).strip()
         else:
+            # 3. Target role after "salary / compensation / location / work mode for / of (the) <role>"
+            # Prepositional pattern MUST take precedence over preceding modifier pattern
             m = re.search(
-                r"\b([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:compensation|salary|work mode|location)\b",
-                q_lower,
+                r"(?:salary|compensation|work mode|location)\s+(?:for|of)\s+(?:the\s+)?([A-Za-z\s]+)",
+                norm_q,
             )
             if m:
                 target_role = m.group(1).strip()
             else:
+                # 4. Target role preceding "compensation / salary / work mode / location"
+                # (e.g., "CEO compensation", "ML Engineer salary")
                 m = re.search(
-                    r"(?:salary|compensation|work mode|location)\s+(?:for|of)\s+(?:the\s+)?([A-Za-z\s]+)",
-                    q_lower,
+                    r"\b([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:compensation|salary|work mode|location)\b",
+                    norm_q,
                 )
                 if m:
                     target_role = m.group(1).strip()
@@ -190,7 +198,7 @@ def _chunk_matches_query_role(q_lower: str, content: str) -> bool:
     if not target_role:
         return True
 
-    stopwords = {
+    modifiers_and_stopwords = {
         "the",
         "a",
         "an",
@@ -203,22 +211,92 @@ def _chunk_matches_query_role(q_lower: str, content: str) -> bool:
         "what",
         "is",
         "are",
-        "range",
-        "details",
+        "base",
+        "starting",
+        "total",
+        "offered",
+        "full",
+        "gross",
+        "net",
+        "fixed",
+        "variable",
+        "minimum",
+        "min",
+        "maximum",
+        "max",
+        "average",
+        "median",
+        "approximate",
+        "current",
+        "proposed",
         "expected",
         "annual",
+        "monthly",
+        "yearly",
         "package",
-        "approximate",
+        "range",
+        "details",
+        "job",
+        "office",
+        "work",
+        "workplace",
+        "primary",
+        "corporate",
+        "headquarters",
+        "physical",
+        "exact",
+        "open",
+        "advertised",
+        "listed",
+        "this",
+        "that",
+        "our",
+        "new",
+        "available",
+        "specified",
+        "given",
+        "stated",
+        "mode",
+        "arrangement",
+        "position",
+        "role",
     }
-    target_tokens = [w for w in re.findall(r"\b[a-zA-Z]+\b", target_role) if w not in stopwords]
+    target_tokens = [
+        w for w in re.findall(r"\b[a-zA-Z]+\b", target_role) if w not in modifiers_and_stopwords
+    ]
     if not target_tokens:
+        # Only generic modifiers queried without a specific role -> valid for this JD
         return True
 
-    for tok in target_tokens:
-        if tok not in doc_tokens:
-            return False
+    # If the user specifically targeted an executive or departmental role, verify it against doc_tokens
+    conflicting_executive_roles = {
+        "ceo",
+        "cto",
+        "cfo",
+        "coo",
+        "cmo",
+        "cio",
+        "president",
+        "vp",
+        "director",
+        "manager",
+        "lead",
+        "hr",
+        "sales",
+        "marketing",
+        "recruiter",
+        "designer",
+        "accountant",
+        "counsel",
+        "intern",
+        "executive",
+        "officer",
+    }
+    target_set = set(target_tokens)
+    if (target_set & conflicting_executive_roles) and not (target_set & doc_tokens):
+        return False
 
-    return True
+    return any(tok in doc_tokens for tok in target_tokens)
 
 
 def _extract_claim_pattern(
@@ -473,6 +551,12 @@ def _extract_claim_pattern(
                 loc_val = loc_match.group(1).strip().lstrip("- ")
                 comp_val = comp_match.group(1).strip().lstrip("- ")
                 val_text = f"Location & Work Mode: {loc_val}; Salary: {comp_val}"
+                if ("salary" in q_lower or "compensation" in q_lower) and not (
+                    "location" in q_lower or "work mode" in q_lower
+                ):
+                    evidence = comp_match.group(0).strip()
+                else:
+                    evidence = loc_match.group(0).strip()
                 return (
                     ExtractedClaim(
                         file_name=chunk["file_name"],
@@ -482,7 +566,7 @@ def _extract_claim_pattern(
                         page=chunk.get("page_number"),
                         states_fact=True,
                         value=val_text,
-                        evidence_quote=loc_match.group(0).strip(),
+                        evidence_quote=evidence,
                         chunk_id=chunk.get("chunk_id", ""),
                         chunk_content=content,
                     ),
@@ -490,18 +574,22 @@ def _extract_claim_pattern(
                 )
 
     # 6. Pricing & Claims Limit queries (e.g. Q12, ADV-17)
-    warranty_domain_tokens = [
-        "warranty",
-        "coverage",
-        "plan",
-        "care",
-        "protection",
-        "service contract",
-        "extended",
-    ]
-    is_warranty_query = any(k in q_lower for k in ["warranty", "coverage", "protection"]) or (
-        ("cost" in q_lower or "price" in q_lower)
-        and any(k in q_lower for k in warranty_domain_tokens)
+    # Strip common non-warranty care phrases to avoid false positives (R-072)
+    clean_care_q = re.sub(
+        r"\b(customer\s+care|health\s*care|day\s*care|child\s*care|care\s+about|take\s+care)\b",
+        " ",
+        q_lower,
+    )
+    is_warranty_query = bool(
+        re.search(
+            r"\b(warranty|coverage|protection(?:\s+plan)?|service\s+contract|extended(?:\s+plan|\s+warranty)?)\b",
+            clean_care_q,
+        )
+        or re.search(r"\b\w+care\b", clean_care_q)
+        or re.search(r"\bcare\s*(?:plan|pack|policy|subscription)\b", clean_care_q)
+    ) and (
+        ("cost" in q_lower or "price" in q_lower or "pricing" in q_lower or "how much" in q_lower)
+        or any(k in q_lower for k in ["warranty", "coverage", "protection"])
     )
     if is_warranty_query:
         # Multi-tier pricing
@@ -546,10 +634,14 @@ def _extract_claim_pattern(
                 discovered_options,
             )
 
-    if "claims" in q_lower or (
-        "limit" in q_lower
-        and any(k in q_lower for k in ["warranty", "coverage", "care", "claim", "plan"])
-    ):
+    has_warranty_limit_signal = bool(
+        re.search(
+            r"\b(warranty|coverage|protection|claim|claims|service\s+contract|extended)\b",
+            clean_care_q,
+        )
+        or re.search(r"\b\w+care\b", clean_care_q)
+    )
+    if "claims" in q_lower or ("limit" in q_lower and has_warranty_limit_signal):
         m_claims = re.search(
             r"maximum of\s*(\d+)\s*claims per product per year is allowed", content, re.I
         )

@@ -470,35 +470,51 @@ def _handle_chart_query(
     }
 
 
-# Competitors and external search tokens for generalized gating (R-004, ADV-17)
-EXTERNAL_COMPETITORS = [
-    "amazon",
-    "flipkart",
-    "walmart",
-    "croma",
-    "reliance digital",
-    "tata cliq",
-    "best buy",
-    "target",
-    "ebay",
+# Competitors and external search patterns for generalized gating (R-004, R-074)
+EXTERNAL_COMPETITOR_PATTERNS = [
+    r"\bamazon(?:\.in)?\b",
+    r"\bflipkart\b",
+    r"\bwalmart\b",
+    r"\bcroma\b",
+    r"\breliance\s+digital\b",
+    r"\btata\s+cliq\b",
+    r"\bbest\s+buy\b",  # Word boundary prevents matching "best buyer"
+    r"\bebay\b",
+    # Retailer Target patterns (excluding corporate metrics like target revenue/sales target)
+    r"(?:\bat|\bfrom|\bcompare\s+(?:with\s+)?|\bcompetitors?\s+like)\s+target\b",
+    r"\btarget\s+(?:stores?|retail(?:er)?|policy|returns?|prices?|replacement)\b",
 ]
-EXTERNAL_SEARCH_PHRASES = [
-    "web search",
-    "external source",
-    "other retailer",
-    "competitor",
-    "on the web",
-    "on the internet",
-    "online market",
+
+EXTERNAL_SEARCH_PATTERNS = [
+    r"\bweb\s+search\b",
+    r"\bexternal\s+sources?\b",
+    r"\bother\s+retailers?\b",
+    r"\bcompetitors?\b",
+    r"\bon\s+the\s+web\b",
+    r"\bon\s+the\s+internet\b",
+    r"\bonline\s+markets?\b",
 ]
 
 
 def _is_external_knowledge_query(q_lower: str) -> bool:
-    """Check if query targets external competitors or external web knowledge."""
-    if any(c in q_lower for c in EXTERNAL_COMPETITORS):
-        return True
-    if any(p in q_lower for p in EXTERNAL_SEARCH_PHRASES):
-        return True
+    """Check if query targets external competitors or external web knowledge (R-004, R-074)."""
+    # Exclude normal corporate metrics that use the word 'target' (e.g. target revenue, sales target)
+    if re.search(
+        r"\b(target\s+revenue|sales\s+target|revenue\s+target|target\s+margin|target\s+audience|target\s+customer|target\s+goal|hit\s+(?:the|our)\s+target|meet\s+(?:the|our)\s+target)\b",
+        q_lower,
+    ):
+        if not any(
+            re.search(p, q_lower)
+            for p in [r"\bamazon\b", r"\bflipkart\b", r"\bwalmart\b", r"\bcroma\b"]
+        ):
+            return False
+
+    for pat in EXTERNAL_COMPETITOR_PATTERNS:
+        if re.search(pat, q_lower):
+            return True
+    for pat in EXTERNAL_SEARCH_PATTERNS:
+        if re.search(pat, q_lower):
+            return True
     return False
 
 
@@ -629,11 +645,18 @@ def ask_assistant(
         ]
         prior_text = " ".join(prior_user_questions).lower()
 
-        ext_name = (
-            "Amazon India"
-            if "amazon" in q_lower or "amazon" in str(web_cit).lower() or "amazon" in prior_text
-            else "external platform"
-        )
+        if "amazon" in q_lower or "amazon" in str(web_cit).lower() or "amazon" in prior_text:
+            ext_name = "Amazon India"
+        elif (
+            "flipkart" in q_lower or "flipkart" in str(web_cit).lower() or "flipkart" in prior_text
+        ):
+            ext_name = "Flipkart"
+        elif "walmart" in q_lower or "walmart" in str(web_cit).lower() or "walmart" in prior_text:
+            ext_name = "Walmart"
+        elif "croma" in q_lower or "croma" in str(web_cit).lower() or "croma" in prior_text:
+            ext_name = "Croma"
+        else:
+            ext_name = "external platform"
         brand_match = re.search(
             r"compare (?:that )?with\s+([A-Za-z0-9_-]+)(?:'s)?", clean_q, re.IGNORECASE
         )

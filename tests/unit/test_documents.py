@@ -139,7 +139,7 @@ def test_deeply_nested_markdown_headings():
 
 
 def test_adv17_warranty_pricing_domain_guard():
-    """Verify ADV-17 fix: general cost questions (lease costs) do not extract warranty pricing."""
+    """Verify ADV-17 fix: general cost questions and non-warranty care phrases do not extract warranty pricing."""
     from backend.doc_agent import _extract_claim_pattern
 
     warranty_chunk = {
@@ -156,20 +156,33 @@ def test_adv17_warranty_pricing_domain_guard():
     }
 
     # Query without warranty domain tokens must NOT match warranty pricing
-    claim, _ = _extract_claim_pattern(
-        "What is the company profit margin and lease costs?", warranty_chunk
-    )
-    assert claim is None
+    for non_warranty_q in [
+        "What is the company profit margin and lease costs?",
+        "What are customer care costs?",
+        "Does the company care about operational costs?",
+        "What is the capacity limit for customer care?",
+        "What are employee day care and health care costs?",
+    ]:
+        claim, _ = _extract_claim_pattern(non_warranty_q, warranty_chunk)
+        assert claim is None, (
+            f"Expected None for non-warranty query: '{non_warranty_q}', got {claim}"
+        )
 
     # Query with warranty domain token MUST match warranty pricing
-    claim_w, _ = _extract_claim_pattern("What is the cost of the warranty plan?", warranty_chunk)
-    assert claim_w is not None
-    assert claim_w.states_fact is True
-    assert "10%" in claim_w.value
+    for warranty_q in [
+        "What is the cost of the warranty plan?",
+        "What is the price of the 2-year extended warranty?",
+        "What does the protection plan cost?",
+        "How much does the coverage cost?",
+    ]:
+        claim_w, _ = _extract_claim_pattern(warranty_q, warranty_chunk)
+        assert claim_w is not None, f"Expected valid claim for warranty query: '{warranty_q}'"
+        assert claim_w.states_fact is True
+        assert "10%" in claim_w.value
 
 
 def test_adv18_job_description_role_guard():
-    """Verify ADV-18 fix: non-matching roles (e.g. CEO) do not match ML Engineer JD."""
+    """Verify ADV-18 fix: non-matching roles (e.g. CEO) do not match ML Engineer JD, while natural phrasing matches."""
     from backend.doc_agent import _chunk_matches_query_role, _extract_claim_pattern
 
     jd_chunk = {
@@ -187,24 +200,47 @@ def test_adv18_job_description_role_guard():
         ),
     }
 
-    # Query asking for CEO must NOT match ML Engineer JD
-    assert not _chunk_matches_query_role("what is the ceo compensation?", jd_chunk["content"])
-    assert not _chunk_matches_query_role("who does the ceo report to?", jd_chunk["content"])
+    # Non-matching role queries MUST NOT match ML Engineer JD
+    for conflicting_q in [
+        "what is the ceo compensation?",
+        "what is the salary of the ceo?",
+        "what is the salary for the ceo?",
+        "what is the compensation of the ceo?",
+        "what is the location of the ceo?",
+        "who does the ceo report to?",
+        "what is the cto salary?",
+        "what is the salary for the director of engineering?",
+        "what is the marketing manager's salary?",
+    ]:
+        assert not _chunk_matches_query_role(conflicting_q.lower(), jd_chunk["content"]), (
+            f"Expected rejection for role conflict: '{conflicting_q}'"
+        )
+        claim, _ = _extract_claim_pattern(conflicting_q, jd_chunk)
+        assert claim is None, f"Expected None extracted claim for '{conflicting_q}'"
 
-    claim_ceo_comp, _ = _extract_claim_pattern("What is the CEO compensation?", jd_chunk)
-    assert claim_ceo_comp is None
-
-    claim_ceo_rep, _ = _extract_claim_pattern("Who does the CEO report to?", jd_chunk)
-    assert claim_ceo_rep is None
-
-    # Query asking for Machine Learning Engineer MUST match
-    assert _chunk_matches_query_role(
+    # Natural queries asking for salary/location modifiers MUST match
+    for valid_q in [
+        "what is the base salary?",
+        "what is the starting salary?",
+        "what is the total compensation?",
+        "what is the job location?",
+        "what is the office location?",
+        "what is the work location?",
+        "what is the salary for the open ML Engineer role?",
+        "what is the machine learning engineer's salary?",
+        "what is the salary of the Machine Learning Engineer?",
+        "what is the salary for the Machine Learning Engineer role?",
         "what is the location and salary for the machine learning engineer role?",
-        jd_chunk["content"],
-    )
-    claim_mle_comp, _ = _extract_claim_pattern(
+    ]:
+        assert _chunk_matches_query_role(valid_q.lower(), jd_chunk["content"]), (
+            f"Expected match for valid query: '{valid_q}'"
+        )
+
+    # Claim extraction must accurately isolate salary quote when only salary is asked
+    claim_salary_only, _ = _extract_claim_pattern(
         "What is the salary for the Machine Learning Engineer role?", jd_chunk
     )
-    assert claim_mle_comp is not None
-    assert claim_mle_comp.states_fact is True
-    assert "12 to 18 LPA" in claim_mle_comp.value
+    assert claim_salary_only is not None
+    assert claim_salary_only.states_fact is True
+    assert "12 to 18 LPA" in claim_salary_only.value
+    assert "Compensation:" in claim_salary_only.evidence_quote

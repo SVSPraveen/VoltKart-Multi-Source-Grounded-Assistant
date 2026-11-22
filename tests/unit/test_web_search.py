@@ -154,5 +154,26 @@ def test_generalized_competitor_gating_when_web_off():
         res = ask_assistant(query, chat_id="chat_test_gen_gate", web_enabled=False)
         assert get_outbound_search_count() == 0
         assert res["abstained"] is True
-        assert "web search is disabled" in res["answer"].lower()
+        assert res.get("metadata", {}).get("probe") == "Q17"
+        assert (
+            res["answer"]
+            == "I cannot answer this question from the uploaded sources, and web search is disabled."
+        )
         assert len(res["citations"]) == 0
+
+    # Ensure corporate metric homonyms (e.g. 'target revenue', 'sales target', 'best buyer') are not trapped by competitor gating
+    for internal_metric_q in [
+        "What was our target revenue in 2025?",
+        "Who is our best buyer in 2025?",
+        "Did any store meet its sales target?",
+    ]:
+        res = ask_assistant(
+            internal_metric_q, chat_id="chat_test_metric_not_gated", web_enabled=False
+        )
+        assert get_outbound_search_count() == 0
+        # Must not be intercepted by Step 2 external competitor web gating (probe Q17)
+        assert res.get("metadata", {}).get("probe") != "Q17"
+        assert (
+            res["answer"]
+            != "I cannot answer this question from the uploaded sources, and web search is disabled."
+        )

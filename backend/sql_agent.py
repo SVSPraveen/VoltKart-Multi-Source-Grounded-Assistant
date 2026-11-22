@@ -185,7 +185,8 @@ def synthesize_sql_query(
     # Case C: Revenue by store in a given year (highest or lowest / extrema)
     is_store_lowest = any(w in q_lower for w in ["lowest", "bottom", "least", "min", "minimum"])
     is_store_highest = any(w in q_lower for w in ["highest", "top", "max", "maximum", "best"])
-    if "revenue" in q_lower and "store" in q_lower and (is_store_lowest or is_store_highest):
+    has_store_metric = any(w in q_lower for w in ["revenue", "sales", "earnings"])
+    if has_store_metric and "store" in q_lower and (is_store_lowest or is_store_highest):
         year_match = re.search(r"\b(20\d{2})\b", question)
         year = year_match.group(1) if year_match else "2025"
         sort_order = "ASC" if is_store_lowest else "DESC"
@@ -347,7 +348,10 @@ def synthesize_sql_query(
         return sql, ""
 
     # Case H: Year-based total revenue probe (A8)
-    year_rev_match = re.search(r"revenue.*?\b(20\d{2})\b|\b(20\d{2})\b.*?revenue", q_lower)
+    year_rev_match = re.search(
+        r"(?:revenue|sales|earnings).*?\b(20\d{2})\b|\b(20\d{2})\b.*?(?:revenue|sales|earnings)",
+        q_lower,
+    )
     if year_rev_match:
         year = year_rev_match.group(1) or year_rev_match.group(2)
         sql = f"""
@@ -510,7 +514,10 @@ def compose_grounded_answer(
     helper_numbers: list[float] = []
 
     # Check for empty result or 0 revenue for year-specific query (A8)
-    year_rev_match = re.search(r"revenue.*?\b(20\d{2})\b|\b(20\d{2})\b.*?revenue", q_lower)
+    year_rev_match = re.search(
+        r"(?:revenue|sales|earnings).*?\b(20\d{2})\b|\b(20\d{2})\b.*?(?:revenue|sales|earnings)",
+        q_lower,
+    )
     if year_rev_match:
         year = year_rev_match.group(1) or year_rev_match.group(2)
         rev_val = rows[0].get("revenue_inr") if rows else None
@@ -556,7 +563,8 @@ def compose_grounded_answer(
     # Handle Q1 & lowest store revenue: Store revenue extrema
     is_store_lowest = any(w in q_lower for w in ["lowest", "bottom", "least", "min", "minimum"])
     is_store_highest = any(w in q_lower for w in ["highest", "top", "max", "maximum", "best"])
-    if "revenue" in q_lower and "store" in q_lower and (is_store_lowest or is_store_highest):
+    has_store_metric = any(w in q_lower for w in ["revenue", "sales", "earnings"])
+    if has_store_metric and "store" in q_lower and (is_store_lowest or is_store_highest):
         extrema_row = rows[0]
         sname = extrema_row.get("store_name", "")
         manager = extrema_row.get("store_manager", "")

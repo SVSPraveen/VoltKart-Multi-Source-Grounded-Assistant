@@ -205,4 +205,22 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Truth harnesses must recursively traverse expected ground truth structures to deterministically assert numeric tolerance across all numeric metrics without hardcoding question-specific field names.
 - Check: Unit test `test_extract_expected_numeric_values` in `tests/unit/test_eval_assertions.py`.
 
+### R-028 — ISO YYYY-MM-DD parsing must precede dayfirst parser fallback
+- Status: observed (Phase 2, 2026-11-22)
+- Context: `dateutil.parser.parse(clean_str, dayfirst=True)` misinterpreted ISO dates like `2025-09-01` as `2025-01-09` because dayfirst parsing greedily interpreted the day <= 12 as day rather than month.
+- Rule: Always check and parse unambiguous ISO 8601 (`YYYY-MM-DD` / `YYYY/MM/DD`) patterns first before invoking fuzzy or dayfirst date parsers.
+- Check: Unit test `test_bundle_date_formats` in `tests/unit/test_date_parser.py` asserting `2025-09-01` -> `2025-09-01`.
+
+### R-029 — Avoid word boundary \b against underscore-separated filename tokens
+- Status: observed (Phase 2, 2026-11-22)
+- Context: Regex `\b20\d{2}...` failed on filenames like `Policy_2025-01-15.docx` because `_` (underscore) is an alphanumeric word character in Python regex, preventing `\b` from triggering between `_` and `2`.
+- Rule: Use negative lookahead/lookbehind `(?<!\d)` and `(?!\d)` rather than word boundaries `\b` when extracting dates from filenames with underscores.
+- Check: Unit test `test_extract_date_from_filename` in `tests/unit/test_date_parser.py`.
+
+### R-030 — Explicit connection lifecycle management and table-level reset on Windows
+- Status: observed (Phase 2, 2026-11-22)
+- Context: `sqlite3.connect` inside `with conn:` only manages transactions, not connection closure, causing file lock `[WinError 32]` when `reset_storage()` attempted to `unlink()` `assistant.db` on Windows.
+- Rule: Always close SQLite connections in a `finally:` block and implement test/runtime reset via `DELETE FROM ...` and `DROP TABLE ...` rather than filesystem unlinking.
+- Check: Unit tests in `tests/unit/test_api.py` and `tests/unit/test_ingestion_robustness.py`.
+
 <!-- New rules go below. Keep numbering sequential. -->

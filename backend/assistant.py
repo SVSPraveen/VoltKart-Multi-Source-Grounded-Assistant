@@ -101,8 +101,7 @@ def ask_assistant(
     user_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
     save_message(user_msg_id, chat_id, "user", clean_q)
 
-    # 1. Adversarial probe handling
-    # A5: Prompt injection / system prompt extraction refusal
+    # 1. Prompt injection / system prompt extraction refusal (R-010)
     if "ignore all previous instructions" in q_lower or "print your system prompt" in q_lower:
         answer = "I cannot fulfill requests to reveal internal prompts or override security instructions."
         asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
@@ -115,66 +114,6 @@ def ask_assistant(
             "abstained": False,
             "chat_id": chat_id,
             "metadata": {"probe": "A5"},
-        }
-
-    # A1: Diamond member return window probe (abstention)
-    if "diamond" in q_lower and ("return" in q_lower or "window" in q_lower):
-        answer = "I cannot answer this question as there is no Diamond loyalty tier in any provided source."
-        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-        save_message(
-            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"probe": "A1"}
-        )
-        return {
-            "answer": answer,
-            "citations": [],
-            "abstained": True,
-            "chat_id": chat_id,
-            "metadata": {"probe": "A1"},
-        }
-
-    # A2: CEO probe (abstention)
-    if "ceo" in q_lower:
-        answer = "I cannot answer this question because information about the CEO is not present in the provided sources and web search is off."
-        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-        save_message(
-            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"probe": "A2"}
-        )
-        return {
-            "answer": answer,
-            "citations": [],
-            "abstained": True,
-            "chat_id": chat_id,
-            "metadata": {"probe": "A2"},
-        }
-
-    # A3: March 2024 return window probe (abstention - before first document)
-    if "march 2024" in q_lower:
-        answer = "I cannot answer this question: no source covers dates prior to 2024-04-01 (the earliest return policy is dated 2024-04-01)."
-        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-        save_message(
-            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"probe": "A3"}
-        )
-        return {
-            "answer": answer,
-            "citations": [],
-            "abstained": True,
-            "chat_id": chat_id,
-            "metadata": {"probe": "A3"},
-        }
-
-    # Web off probe (e.g. Q17 Amazon India return window when web is disabled)
-    if "amazon" in q_lower and not web_enabled:
-        answer = "I cannot answer this question from the provided sources and web search is off."
-        asst_msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-        save_message(
-            asst_msg_id, chat_id, "assistant", answer, citations=[], metadata={"web_enabled": False}
-        )
-        return {
-            "answer": answer,
-            "citations": [],
-            "abstained": True,
-            "chat_id": chat_id,
-            "metadata": {"web_enabled": False},
         }
 
     # 2. Contextualization & entity resolution from previous turns

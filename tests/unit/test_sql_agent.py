@@ -56,3 +56,42 @@ def test_table_qa_refund_by_region_reconciliation():
     assert not res.abstained
     assert res.reconciled
     assert "grand total" in res.answer.lower()
+
+
+def test_extract_sql_from_llm_json_block():
+    """Verify that JSON markdown code blocks are parsed cleanly into sql and ambiguity note."""
+    from backend.sql_agent import _extract_sql_from_llm_text
+
+    llm_output = """```json
+{
+  "sql": "SELECT store_id, revenue_inr FROM store_revenue ORDER BY revenue_inr DESC LIMIT 1;",
+  "ambiguity_note": "Timeframe assumed to be current fiscal year."
+}
+```"""
+    sql, note = _extract_sql_from_llm_text(llm_output)
+    assert (
+        sql == "SELECT store_id, revenue_inr FROM store_revenue ORDER BY revenue_inr DESC LIMIT 1;"
+    )
+    assert note == "Timeframe assumed to be current fiscal year."
+
+
+def test_table_qa_abstention_on_unrelated_query():
+    """Verify that asking non-tabular questions causes honest abstention instead of fake queries."""
+    res = run_table_qa("Who is the CEO of the company?")
+    assert res.abstained
+    assert "cannot answer" in res.answer.lower()
+    assert res.sql == ""
+
+
+def test_disambiguation_arbitrary_name_probe():
+    """Verify that person order queries dynamically disambiguate without hardcoded names."""
+    with get_duckdb_read_connection() as conn:
+        tables = [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+    if "customers" not in tables:
+        pytest.skip("Sample tables not loaded.")
+
+    res = run_table_qa("How many orders did Priya make?")
+    # In database or not, should attempt dynamic search and either disambiguate, report count, or report not found
+    assert not res.abstained or "not found" in res.answer.lower()
+    assert res.query_result is not None
+    assert "priya" in res.sql.lower()

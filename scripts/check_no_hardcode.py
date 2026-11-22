@@ -46,7 +46,7 @@ FORBIDDEN_PATTERNS: list[tuple[str, str, bool]] = [
     ("Customer: Ishaan Sharma", r"\bIshaan Sharma\b", True),
     ("Customer: Varun Mishra", r"\bVarun Mishra\b", True),
     ("Customer: Kabir Kapoor", r"\bKabir Kapoor\b", True),
-    ("Customer: Kavya Kapoor", r"\bKavya Kapoor\b", True),
+    ("Customer: Kavya (any)", r"\bKavya\b", True),
     # Regex matching any sample entity ID formats
     ("Sample Customer ID (C0001-C0140)", r"\bC0[01]\d{2}\b", False),
     ("Sample Order ID (O00001-O00900)", r"\bO00\d{3}\b", False),

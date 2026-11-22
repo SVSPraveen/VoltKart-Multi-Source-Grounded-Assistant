@@ -34,3 +34,21 @@ def test_grounding_allows_quarter_numbers():
 def test_grounding_empty_prose():
     res = verify_numeric_grounding("No matching records were found.", query_rows=[])
     assert res.grounded
+
+
+def test_grounding_date_hyphens_not_negative():
+    rows = [{"date_col": "2025-01-15", "val": 100}]
+    question = "Show orders for 2025-01-15"
+    prose = "Orders for 2025-01-15 showed 100 units."
+    res = verify_numeric_grounding(prose, query_rows=rows, question_text=question)
+    assert res.grounded
+    assert len(res.ungrounded_numbers) == 0
+
+
+def test_grounding_allows_sql_query_parameters():
+    rows = [{"revenue": 5000.0}]
+    sql = "SELECT SUM(amount) AS revenue FROM orders WHERE order_date >= '2025-01-01' LIMIT 5;"
+    question = "What was the revenue?"
+    prose = "From 2025-01-01 the revenue was ₹5,000.00 across 5 items."
+    res = verify_numeric_grounding(prose, query_rows=rows, question_text=question, sql_query=sql)
+    assert res.grounded

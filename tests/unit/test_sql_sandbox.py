@@ -51,3 +51,17 @@ def test_reconcile_component_sum():
         is_rec, unjoined, diff = reconcile_component_sum("returns", "refund_amount_inr", total)
         assert is_rec
         assert diff == 0.0
+
+
+def test_deliberate_fan_out_query_fails_reconciliation():
+    """Verify join fan-out inflation is detected by reconciliation check (R-020)."""
+    with get_duckdb_read_connection() as conn:
+        tables = [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+    if "returns" in tables:
+        # Deliberately fanned-out / inflated component sum
+        inflated_component_total = 2500000.0
+        is_rec, unjoined, diff = reconcile_component_sum(
+            "returns", "refund_amount_inr", inflated_component_total
+        )
+        assert not is_rec
+        assert diff > 1000.0

@@ -39,8 +39,8 @@ def extract_numbers(text: str) -> list[float]:
     """Extract numeric values from text, stripping currencies, commas, and percentage signs."""
     # Replace currency symbols, commas, and percentage signs
     cleaned = re.sub(r"[₹$,%]", "", text)
-    # Match floats and integers
-    tokens = re.findall(r"[-+]?\d*\.\d+|\b[-+]?\d+\b", cleaned)
+    # Match floats and integers; avoid interpreting date hyphens as negative signs
+    tokens = re.findall(r"(?<![\w\d])[-+]?\d+(?:\.\d+)?|\b\d+(?:\.\d+)?", cleaned)
     numbers: list[float] = []
     for tok in tokens:
         try:
@@ -56,8 +56,9 @@ def build_allowed_number_pool(
     question_text: str = "",
     row_count: int | None = None,
     extra_allowed: list[float] | None = None,
+    sql_query: str = "",
 ) -> list[float]:
-    """Collect all valid, grounded numbers from SQL results, derived sums, and user query."""
+    """Collect all valid, grounded numbers from SQL results, query text, derived sums, and prompt."""
     allowed: list[float] = [0.0]  # Zero is always a valid count or empty sum
 
     # 1. Numbers from query rows
@@ -79,13 +80,18 @@ def build_allowed_number_pool(
         if quarter_match:
             allowed.append(float(quarter_match.group(1)))
 
-    # 3. Row count and enumeration ranks (1..N)
+    # 3. Numbers from executed SQL query (e.g. explicit dates or limits)
+    if sql_query:
+        for num in extract_numbers(sql_query):
+            allowed.append(num)
+
+    # 4. Row count and enumeration ranks (1..N)
     effective_count = row_count if row_count is not None else (len(query_rows) if query_rows else 0)
     allowed.append(float(effective_count))
     for r in range(1, effective_count + 1):
         allowed.append(float(r))
 
-    # 4. Extra derived values computed in code (e.g. grand total sums, reconciliation totals)
+    # 5. Extra derived values computed in code (e.g. grand total sums, reconciliation totals)
     if extra_allowed:
         for val in extra_allowed:
             if val is not None:
@@ -100,6 +106,7 @@ def verify_numeric_grounding(
     question_text: str = "",
     row_count: int | None = None,
     extra_allowed: list[float] | None = None,
+    sql_query: str = "",
     tolerance: float = 0.01,
 ) -> GroundingResult:
     """Verify that every number in prose is grounded in query results or question prompt.
@@ -110,6 +117,7 @@ def verify_numeric_grounding(
         question_text: The user input question string.
         row_count: Optional explicit row count.
         extra_allowed: Optional list of code-derived numbers (e.g. sum of rows).
+        sql_query: Optional executed SQL query string.
         tolerance: Numeric comparison tolerance (default: 0.01).
 
     Returns:
@@ -124,6 +132,7 @@ def verify_numeric_grounding(
         question_text=question_text,
         row_count=row_count,
         extra_allowed=extra_allowed,
+        sql_query=sql_query,
     )
 
     ungrounded: list[float] = []

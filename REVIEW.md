@@ -223,4 +223,34 @@ actually bites, change its status to `observed` and add the date and commit.
 - Rule: Always close SQLite connections in a `finally:` block and implement test/runtime reset via `DELETE FROM ...` and `DROP TABLE ...` rather than filesystem unlinking.
 - Check: Unit tests in `tests/unit/test_api.py` and `tests/unit/test_ingestion_robustness.py`.
 
+### R-031 — Storage resets must clear in-memory table and session registries
+- Status: observed (Phase 2, 2026-11-22)
+- Context: In unit test execution, `reset_storage()` cleared SQLite and DuckDB tables on disk, but in-memory `_TABLE_PROFILES` and `_LOADED_TABLES` dictionaries retained previously loaded tables, causing table pollution across tests in the same process.
+- Rule: Pair storage resets with in-memory registry eviction (via registered reset callbacks or coordinated cleanup) so tests and resets start with completely empty state.
+- Check: Unit test suite running multiple table ingestion tests sequentially in the same process.
+
+### R-032 — Date parsing without 4-digit year presence validation hallucinates dates
+- Status: observed (Phase 2, 2026-11-22)
+- Context: Calling `dateutil.parser.parse("Phase 2", fuzzy=True)` without an explicit 4-digit year used `datetime.now()` for year and month, falsely parsing "Phase 2" as day 2 of the current month. Similarly, month-year dates without day (e.g. "July 2024") hallucinated the current execution day instead of defaulting deterministically to day 1.
+- Rule: Date parsers must require a 4-digit year (`19\d{2}|20\d{2}`) to consider a string a candidate document date, and supply a fixed default (`default=datetime(2000, 1, 1)`) so missing day components deterministically default to the 1st of the month.
+- Check: Unit tests in `tests/unit/test_date_parser.py` rejecting "Phase 2", "Section 12", "v2.0" and asserting "July 2024" -> "2024-07-01".
+
+### R-033 — Latin-1 decoding hides encoding errors and corrupts UTF-16 byte streams
+- Status: observed (Phase 2, 2026-11-22)
+- Context: `sniff_delimiter_and_encoding` checked `latin-1` in a fallback loop. Because latin-1 maps all bytes 0x00-0xFF to characters without error, UTF-16 files (with null bytes) were decoded as latin-1, producing corrupted column names with embedded null characters (e.g. `ÿþi d`).
+- Rule: Always check for UTF-16 BOMs (`b"\xff\xfe"`, `b"\xfe\xff"`) and detect null bytes `\x00` in raw text samples before attempting single-byte fallbacks; never use latin-1 as a blind default.
+- Check: Unit test `test_utf16_csv_ingestion` in `tests/unit/test_tables.py`.
+
+### R-034 — SQL identifiers must be quoted to prevent collisions with reserved keywords
+- Status: observed (Phase 2, 2026-11-22)
+- Context: Uploading a CSV named `order.csv`, `select.csv`, or `user.csv` caused DuckDB syntax error `Parser Error: syntax error at or near "order"` when creating or dropping unquoted tables.
+- Rule: Always wrap table and column identifiers in double quotes (e.g. `CREATE OR REPLACE TABLE "{table_name}"`, `DROP TABLE IF EXISTS "{t_name}"`).
+- Check: Unit test `test_sql_reserved_keyword_table_names` in `tests/unit/test_tables.py`.
+
+### R-035 — Data dictionary documentation must not pollute document version families
+- Status: observed (Phase 2, 2026-11-22)
+- Context: Uploading `DATA_DICTIONARY.md` caused it to be chunked as a 9th document, assigned a fake 5th version family `sample bundle data dictionary`, and parsed with a hijacked date `2024-04-01` from a table cell.
+- Rule: Identify data dictionary / documentation files, load them into the schema documentation store for SQL grounding, and exclude them from user document version families.
+- Check: `test_data_dictionary_loaded_as_documentation` in `test_ingestion_robustness.py` and `test_full_sample_bundle_ingestion` asserting exactly 8 documents and 4 version families.
+
 <!-- New rules go below. Keep numbering sequential. -->

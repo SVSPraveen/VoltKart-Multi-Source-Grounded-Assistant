@@ -105,3 +105,33 @@ def test_resolve_document_date_undated():
     assert res.doc_date is None
     assert res.source == "undated"
     assert res.date_disagreement is False
+
+
+def test_reject_arbitrary_numbers_as_dates():
+    """Ensure arbitrary numbers and phrases without 4-digit years are rejected."""
+    invalid_dates = [
+        "Phase 2",
+        "Section 12",
+        "Version 2.0",
+        "TBD",
+        "Pending",
+        "20%",
+        "Item 5",
+        "30 days",
+    ]
+    for raw in invalid_dates:
+        assert normalize_parsed_date(raw) is None, f"Incorrectly parsed invalid date: {raw}"
+
+
+def test_month_year_deterministic_start():
+    """Dates with month and year but no day must deterministically resolve to day 1."""
+    assert normalize_parsed_date("July 2024") == "2024-07-01"
+    assert normalize_parsed_date("October 2025") == "2025-10-01"
+    assert normalize_parsed_date("March 2026") == "2026-03-01"
+
+
+def test_filename_date_separators():
+    """Verify filename extraction across dot, underscore, hyphen, space, and compact forms."""
+    assert extract_date_from_filename("Policy_2025.01.15.pdf") == "2025-01-15"
+    assert extract_date_from_filename("Policy 2025-01-15.docx") == "2025-01-15"
+    assert extract_date_from_filename("Policy_20250115.txt") == "2025-01-15"

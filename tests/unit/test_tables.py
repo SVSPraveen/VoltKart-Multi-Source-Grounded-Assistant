@@ -12,6 +12,8 @@ from backend.tables import (
     infer_primary_key,
     ingest_table,
     is_data_documentation_text,
+    load_csv_dataframe,
+    parse_declared_schema_from_documentation,
     profile_column,
     sniff_delimiter_and_encoding,
 )
@@ -149,3 +151,55 @@ def test_generate_schema_card():
     assert "Table: `departments`" in card.markdown_summary
     assert "dept_id" in card.markdown_summary
     assert "Definition: Active depts only." in card.markdown_summary
+
+
+def test_utf16_csv_ingestion():
+    """Verify UTF-16 CSV files with and without BOM load without column name corruption."""
+    utf16_bom = "id,name\n1,Alice\n2,Bob\n".encode("utf-16")
+    df_bom = load_csv_dataframe(utf16_bom, "users_utf16.csv")
+    assert list(df_bom.columns) == ["id", "name"]
+    assert len(df_bom) == 2
+
+    # Ingest into DuckDB
+    tbl_name, df, prof = ingest_table(utf16_bom, "users_utf16.csv")
+    assert tbl_name == "users_utf16"
+    assert prof.row_count == 2
+    assert [c.name for c in prof.columns] == ["id", "name"]
+
+
+def test_sql_reserved_keyword_table_names():
+    """Verify tables with SQL reserved keywords (order, select, group, user) load cleanly."""
+    csv_bytes = b"order_id,amount\nORD_01,150.0\nORD_02,250.0\n"
+    tbl_name, df, prof = ingest_table(csv_bytes, "order.csv")
+    assert tbl_name == "order"
+    assert prof.row_count == 2
+    assert prof.primary_key == "order_id"
+
+
+def test_declared_schema_parsing():
+    """Verify parsing of declared primary and foreign keys from documentation text (spec 7.1)."""
+    doc_markdown = """
+    # Data Dictionary
+    | File | Primary key | Foreign keys | Columns |
+    |---|---|---|---|
+    | orders.csv | order_id | customer_id -> customers, store_id -> stores | order_id, customer_id, store_id |
+    | order_items.csv | order_item_id | order_id -> orders, product_id -> products | order_item_id, order_id, product_id |
+    """
+    pks, fks = parse_declared_schema_from_documentation(doc_markdown)
+    assert pks["orders"] == "order_id"
+    assert pks["order_items"] == "order_item_id"
+    assert len(fks) == 4
+    assert any(
+        r.from_table == "orders"
+        and r.from_column == "customer_id"
+        and r.to_table == "customers"
+        and r.status == "declared"
+        for r in fks
+    )
+    assert any(
+        r.from_table == "order_items"
+        and r.from_column == "product_id"
+        and r.to_table == "products"
+        and r.status == "declared"
+        for r in fks
+    )

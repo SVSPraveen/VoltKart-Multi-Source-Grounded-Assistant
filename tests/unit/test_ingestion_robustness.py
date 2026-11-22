@@ -11,6 +11,9 @@ Verifies graceful handling and clean user-facing error reporting for:
 - Zero raw stack traces leaked to users
 """
 
+import io
+import zipfile
+
 import pytest
 
 from backend.ingestion import (
@@ -122,3 +125,40 @@ def test_no_raw_stack_traces_in_error_summary():
         assert "Traceback" not in err.error
         assert 'File "' not in err.error
         assert len(err.error) > 0
+
+
+def test_corrupt_zip_docx_rejected():
+    """Corrupted zip archive with .docx extension must be rejected cleanly (R-023)."""
+    corrupt_docx = b"PK\x03\x04\x00\x00corrupted_archive_data"
+    summary = ingest_files([("corrupt.docx", corrupt_docx)])
+    assert len(summary.errors) == 1
+    assert "corrupt" in summary.errors[0].error.lower()
+
+
+def test_non_word_zip_docx_rejected():
+    """Zip archives that do not contain Word document XML must be rejected (R-023)."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("notes.txt", "plain text")
+    data = buf.getvalue()
+
+    summary = ingest_files([("not_a_doc.docx", data)])
+    assert len(summary.errors) == 1
+    assert "not a valid word" in summary.errors[0].error.lower()
+
+
+def test_data_dictionary_loaded_as_documentation():
+    """Data dictionary must load as documentation text, not as a document family (spec 7.1)."""
+    dict_content = (
+        b"# Data Dictionary\n\n"
+        b"| File | Primary key | Foreign keys |\n"
+        b"|---|---|---|\n"
+        b"| stores.csv | store_id | |\n\n"
+        b"Business definitions:\nRevenue = delivered orders only.\n"
+    )
+    summary = ingest_files([("DATA_DICTIONARY.md", dict_content)])
+    assert summary.documentation_loaded is True
+    # Must not pollute the knowledge base documents list
+    assert not any(d.file_name == "DATA_DICTIONARY.md" for d in summary.documents)
+    # Must not create a bogus version family
+    assert "data dictionary" not in summary.version_families

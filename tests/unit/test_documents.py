@@ -103,3 +103,36 @@ def test_sample_bundle_documents_extraction():
 
     # 8 documents must group into exactly 4 distinct version families
     assert len(families) == 4
+
+
+def test_numbered_headings_with_punctuation_and_numbers():
+    """Verify numbered headings with hyphens, numbers, and punctuation are recognized as sections."""
+    text_content = (
+        b"POLICY GUIDANCE\n"
+        b"===============\n\n"
+        b"1. 30-Day Policy\n"
+        b"Eligible goods can be returned within 30 days.\n\n"
+        b"2. Return Window (All Tiers)\n"
+        b"Special rules apply to electronics.\n\n"
+        b"3. Restocking Fee: Tier Exceptions\n"
+        b"Restocking fee waived for premium tiers.\n"
+    )
+    title, sections = parse_text(text_content)
+    headings = [h for h, _ in sections]
+    assert any("30-Day Policy" in h for h in headings)
+    assert any("Return Window (All Tiers)" in h for h in headings)
+    assert any("Restocking Fee: Tier Exceptions" in h for h in headings)
+
+
+def test_deeply_nested_markdown_headings():
+    """Verify markdown headings at levels h1 through h6 are recognized."""
+    text_content = (
+        b"# Level 1\nContent 1\n\n"
+        b"### Level 3\nContent 3\n\n"
+        b"##### Level 5 Sub-clause\nDeep content\n"
+    )
+    title, sections = parse_text(text_content)
+    headings = [h for h, _ in sections]
+    assert any("Level 1" in h for h in headings)
+    assert any("Level 3" in h for h in headings)
+    assert any("Level 5 Sub-clause" in h for h in headings)
